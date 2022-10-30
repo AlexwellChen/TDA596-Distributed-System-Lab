@@ -37,7 +37,7 @@ class Lab1Topology( Topo ):
         globalLinkBandwidth = 1000 # Mbps
         globalLinkLosses = 0.000001 # 1e-5 PER
         globalDelay = random.randrange(100,150) # ms, delay = RTT/2
-        print "globalDelay is : ", globalDelay, "ms"
+        print("globalDelay is : ", globalDelay, "ms")
         # arrays
         switches = []
         servers = []
@@ -93,7 +93,7 @@ class Lab():
         try:
             a = makeTerm(node=server, cmd="python {} --id {} --vessels {}".format(self.pathToServer, server.IP().replace('10.1.0.',''), self.nbOfServersPerRegion*self.nbOfRegions))
         except Exception as e:
-            print e
+            print(e)
 #------------------------------------------------------------------------------------------------------
     # run(self)
     # Run the lab 1
@@ -109,7 +109,7 @@ class Lab():
         # We connect the network to Internet
         simulation.addNAT().configDefault()
         # We can start the simulation
-        print "Starting the simulation..."
+        print("Starting the simulation...")
         simulation.start()
         # For each host
         for host in simulation.hosts:
@@ -124,7 +124,7 @@ class Lab():
         # We also start the Command Line Interface of Mininet
         CLI(simulation)
         # Once the CLI is closed (with exit), we can stop the simulation
-        print "Stopping the simulation NOW!"
+        print("Stopping the simulation NOW!")
         # We close the xterms (mininet.term.cleanUpScreens)
         #cleanUpScreens()
         simulation.stop()
