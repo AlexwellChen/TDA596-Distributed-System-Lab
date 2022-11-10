@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net"
+	"net/http"
 	"os"
 	"strconv"
 )
@@ -65,7 +66,8 @@ func handleConnection(conn net.Conn, root string) {
 		fmt.Println(conn.RemoteAddr().String())
 
 		// msg to request
-		request := string(buffer[:msg])
+		// request := string(buffer[:msg])
+		request := http.ReadRequest(buffer)
 		fmt.Println("Request content:\n", request)
 
 		// Todo: handle request with function handleRequest, only GET and POST. Other methods should return 405.
