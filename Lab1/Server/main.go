@@ -35,6 +35,7 @@ func ListenAndServe(address string, root string) error {
 	}
 	defer listener.Close()
 	fmt.Println("Listening on " + address)
+	//Todo: Add concurrency control here, maxmum 10 connections
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
@@ -67,9 +68,15 @@ func handleConnection(conn net.Conn, root string) {
 		request := string(buffer[:msg])
 		fmt.Println("Request content:\n", request)
 
-		// handle request
+		// Todo: handle request with function handleRequest, only GET and POST. Other methods should return 405.
 		// response := handleRequest(request, root)
 
+		/*
+			Todo:
+				send response to client
+				if content is a directory, send a string of files in it
+				if content is a file, use POST method to send it
+		*/
 		// response to connection
 		conn.Write([]byte("Test response ack"))
 		fmt.Println("--------------------")
@@ -77,7 +84,7 @@ func handleConnection(conn net.Conn, root string) {
 }
 
 func main() {
-	port := 8080
+	port := getPort()
 	if port == -1 {
 		return
 	}

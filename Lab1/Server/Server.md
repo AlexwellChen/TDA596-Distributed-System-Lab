@@ -1,0 +1,1 @@
+Run server with `go run main.go <port number>`
