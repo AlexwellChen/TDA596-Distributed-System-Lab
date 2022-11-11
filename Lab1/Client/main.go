@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
@@ -16,13 +18,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	//建立服务器连接
+	// Connect to server
 	conn, err := net.DialTCP("tcp", nil, tcpAddr)
 
 	if err != nil {
 		fmt.Println(conn.RemoteAddr().String(), os.Stderr, "Fatal error:", err)
 		os.Exit(1)
 	}
+
+	defer conn.Close()
 
 	fmt.Println("connection success")
 	sender(conn)
@@ -33,20 +37,30 @@ func main() {
 func sender(conn *net.TCPConn) {
 	host_addr := conn.RemoteAddr().String()
 
-	url := "http://" + host_addr + "/root/1.txt"
+	url := "http://" + host_addr + "/root"
 	fmt.Println("url:", url)
+
+	// Create a new request
 	request, _ := http.NewRequest("GET", url, nil)
 	err := request.Write(conn)
-	// fmt.Println("Request: ", request)
-	// src := request.URL.String()             // Todo: 把request转换成字符串
-	// msgBack, err := conn.Write([]byte(src)) //给服务器发信息
-
 	if err != nil {
 		fmt.Println(conn.RemoteAddr().String(), " Error: ", err)
 		os.Exit(1)
 	}
-	buffer := make([]byte, 1024)
-	msg, _ := conn.Read(buffer) //接受服务器信息
-	fmt.Println(conn.RemoteAddr().String(), "服务器返回: ", string(buffer[:msg]))
-	// // conn.Write([]byte("ok")) //在告诉服务器，它的反馈收到了。
+
+	// Read response from connection
+	reader := bufio.NewReader(conn)
+	response, err := http.ReadResponse(reader, request)
+	if err != nil {
+		fmt.Println("Error reading response:", err)
+	}
+	defer response.Body.Close()
+
+	// Handle response body
+	// Todo: 区分请求内容，如果是路径，需要列出目录下的文件；如果是文件，需要读取文件内容并保存到本地
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		fmt.Println("Error reading body:", err)
+	}
+	fmt.Println("Response body:\n", string(body))
 }
