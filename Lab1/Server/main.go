@@ -125,6 +125,7 @@ func ListenAndServe(address string, root string) error {
 }
 
 func handleConnection(conn net.Conn, root string) {
+	//Create an empty buffer
 	buffer := make([]byte, 1024)
 	defer conn.Close()
 	// read from connection
@@ -169,6 +170,7 @@ func handleConnection(conn net.Conn, root string) {
 func main() {
 	port := getPort()
 	if port == -1 {
+		fmt.Println("Please state port number!")
 		return
 	}
 	addr := "127.0.0.1:" + strconv.Itoa(port)
