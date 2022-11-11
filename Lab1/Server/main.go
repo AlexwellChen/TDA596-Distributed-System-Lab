@@ -34,7 +34,7 @@ func getPort() int {
 func getHandler(r *http.Request) {
 	fmt.Println("Invoke GET Handler")
 	response := r.Response
-	defer response.Body.Close()
+
 	url := r.URL.Path
 	pwd, _ := os.Getwd()
 	url = pwd + url
@@ -91,6 +91,7 @@ func getHandler(r *http.Request) {
 		response.StatusCode = http.StatusOK
 		response.Body = ioutil.NopCloser(strings.NewReader(string(bytes)))
 	}
+
 }
 
 func postHandler(r *http.Request) {
@@ -164,6 +165,7 @@ func handleConnection(conn net.Conn, root string) {
 	}
 	request.Response.Write(conn)
 	fmt.Println("Send response successfully!")
+	defer request.Response.Body.Close()
 	fmt.Println("--------------------------------------------------")
 }
 
