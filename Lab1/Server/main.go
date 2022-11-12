@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -9,6 +10,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"golang.org/x/sync/semaphore"
 )
 
 const (
@@ -16,8 +19,8 @@ const (
 	Weight = 1  // Weight of each connection
 )
 
-// global variable
-var connection_num = 0
+// global variable semaphore
+var s = semaphore.NewWeighted(Limit)
 
 // Get port number from command line
 func getPort() int {
@@ -136,14 +139,25 @@ func ListenAndServe(address string, root string) error {
 	// defer listener.Close()
 	fmt.Println("Listening on " + address)
 	//Todo: Add concurrency control here, maxmum 10 connections
+	ctx := context.TODO()
+	// TODO returns a non-nil, empty Context.
+	// Code should use context.TODO when it's unclear which Context to use or it is not yet available
+	// (because the surrounding function has not yet been extended to accept a Context parameter)
 	for {
+		//acquire semaphore
+
 		conn, err := listener.Accept()
 		if err != nil {
 			fmt.Println("Accept err!: ", err)
+		} else {
+			err = s.Acquire(ctx, Weight)
+			if err != nil {
+				fmt.Println("Semaphore full!")
+			} else {
+				go handleConnection(conn, root)
+			}
 		}
-		go handleConnection(conn, root)
-		connection_num += 1
-		fmt.Println("Connection number: ", connection_num)
+
 	}
 }
 
@@ -158,10 +172,12 @@ func handleConnection(conn net.Conn, root string) {
 			// handle error
 			fmt.Println("connection err!:", err)
 			conn.Close()
+			//release semaphore
+			s.Release(Weight)
 			return
 		}
 		// print message
-		fmt.Println("Connection from ", conn.RemoteAddr().String())
+		fmt.Println("Request from ", conn.RemoteAddr().String())
 
 		// msg to request
 		request_str := string(buffer[:msg])
