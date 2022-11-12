@@ -13,7 +13,7 @@ import (
 
 func main() {
 	// user input server address
-	fmt.Println("Please enter server address:")
+	fmt.Println("Please enter <server address>:<Port number>, e.g. 127.0.0.1:8080")
 	reader := bufio.NewReader(os.Stdin)
 	// server, _ := reader.ReadString('\n')
 	server := "localhost:8080"
@@ -37,6 +37,7 @@ func main() {
 	}
 	fmt.Println("connection success")
 	for {
+		// Todo: Add a UNIX style command line interface
 		//repeat send request until user input "exit"
 		//Ask user for input request resource and method?
 		fmt.Println("Please enter request method, or enter exit to exit connection:") //GET POST
