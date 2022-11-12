@@ -98,23 +98,18 @@ func getHandler(r *http.Request) {
 		//get the last element of the array -> Ending of file name
 		//(e.g. html, txt, gif, jpeg, jpg or css)
 		fileNameEnding := arrUrl[len(arrUrl)-1]
-		//fmt.Println("Ending of File name: ", fileNameEnding)
-		// TODO: use function to get the file content type for transmitting them to client
+		// get the file content type for transmitting them to client
 		contentType, err := getFileContentType(file)
 
 		if err != nil {
 			fmt.Println("Get file content type error!")
 		}
-		fmt.Println("Content type and file name ending: ", contentType, fileNameEnding)
 
 		//check if the file is we need file
 		if fileNameEnding == "html" || fileNameEnding == "txt" || fileNameEnding == "css" || fileNameEnding == "gif" || fileNameEnding == "jpeg" || fileNameEnding == "jpg" {
-			bytes, err := ioutil.ReadAll(file)
-			if response.Header == nil {
-				response.Header = make(map[string][]string)
-			}
-			response.Header.Add("Content-Type", contentType)
-			fmt.Println(contentType)
+			// TODO: check why file was closed before, has to reopen otherwise will get is empty
+			file, _ = os.Open(url)
+			content, err := ioutil.ReadAll(file)
 			if err != nil {
 				fmt.Println("Read file error!")
 				// Return internal server error
@@ -123,9 +118,15 @@ func getHandler(r *http.Request) {
 				response.Body = ioutil.NopCloser(strings.NewReader(resp_internal_err))
 				return
 			}
+			if response.Header == nil {
+				response.Header = make(map[string][]string)
+			}
+			response.Header.Add("Content-Type", contentType)
+			fmt.Println(contentType)
 			response.StatusCode = http.StatusOK
-			response.ContentLength = int64(len(bytes))
-			response.Body = ioutil.NopCloser(strings.NewReader(string(bytes)))
+			response.ContentLength = int64(len(content))
+			fmt.Println("Content length: ", response.ContentLength)
+			response.Body = ioutil.NopCloser(strings.NewReader(string(content)))
 		} else {
 			// Return internal server error
 			response.StatusCode = http.StatusBadRequest
@@ -255,7 +256,6 @@ func getFileContentType(out *os.File) (string, error) {
 	// Only the first 512 bytes are used to sniff the content type.
 	buffer := make([]byte, 512)
 	n, err := out.Read(buffer)
-	fmt.Println("Read file content: ", buffer)
 	if err != nil {
 		return "", err
 	}

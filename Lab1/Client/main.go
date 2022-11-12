@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
@@ -58,7 +59,6 @@ func main() {
 		resourcePath := resource + "/" + fileName
 
 		sender(conn, method, resourcePath, fileName)
-		fmt.Println("send over")
 	}
 	/*	method := "GET"
 		file := "2.jpg"
@@ -112,7 +112,6 @@ func sender(conn *net.TCPConn, method string, resource string, fileName string) 
 			} else {
 				fmt.Println("Response Header content type:", response.Header.Get("Content-Type"))
 				downloadFile(response, fileName)
-				fmt.Println(response.Body)
 			}
 		} else {
 			fmt.Println("Post success")
@@ -124,10 +123,24 @@ func downloadFile(response *http.Response, fileName string) {
 	// Download the file
 	fmt.Println("Response status:", response.Status)
 	fmt.Println("Response body:")
-	//create file
-	file, err := os.Create(fileName)
-	if err != nil {
-		fmt.Println("Error create file:", err)
+	//check if file exists
+	_, err := os.Stat(fileName)
+	var file *os.File
+	if err == nil {
+		//create file
+		fmt.Println("File already exists, overwrite it")
+		//TODO: os.Open needs additional parameters to overwrite the file
+		file, err = os.Open(fileName)
+		if err != nil {
+			fmt.Println("Error openning file:", err)
+		}
+	} else {
+		fmt.Println("File does not exist, create it")
+		file, _ = os.Create(fileName)
 	}
 	defer file.Close()
+	// _, _ = io.Copy(os.Stdout, response.Body)
+	bytes, err := ioutil.ReadAll(response.Body)
+	fmt.Println("bytes:", bytes)
+	file.Write(bytes)
 }
