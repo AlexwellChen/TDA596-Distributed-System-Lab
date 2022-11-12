@@ -16,6 +16,9 @@ const (
 	Weight = 1  // Weight of each connection
 )
 
+// global variable
+var connection_num = 0
+
 // Get port number from command line
 func getPort() int {
 	args := os.Args
@@ -41,10 +44,12 @@ func getHandler(r *http.Request) {
 
 	// Check if file exists
 	s, err := os.Stat(url)
+	resp_not_found := "Resource not found"
 	if err != nil {
 		fmt.Println("Status error: ", err)
 		response.StatusCode = http.StatusNotFound
-		response.Body = ioutil.NopCloser(strings.NewReader("Resource not found"))
+		response.ContentLength = int64(len(resp_not_found))
+		response.Body = ioutil.NopCloser(strings.NewReader(resp_not_found))
 		return
 	}
 
@@ -54,12 +59,14 @@ func getHandler(r *http.Request) {
 		fmt.Println("Open file or directory error: ", err)
 		// Return resource not found
 		response.StatusCode = http.StatusNotFound
-		response.Body = ioutil.NopCloser(strings.NewReader("Resource not found"))
+		response.ContentLength = int64(len(resp_not_found))
+		response.Body = ioutil.NopCloser(strings.NewReader(resp_not_found))
 		return
 	}
 	defer file.Close()
 
 	// Check if it is a directory
+	resp_internal_err := "Internal server error"
 	if s.IsDir() {
 		// a directory
 		file_info, err := file.Readdir(-1)
@@ -67,7 +74,8 @@ func getHandler(r *http.Request) {
 			fmt.Println("Read file error!")
 			// Return internal server error
 			response.StatusCode = http.StatusInternalServerError
-			response.Body = ioutil.NopCloser(strings.NewReader("Internal server error"))
+			response.ContentLength = int64(len(resp_internal_err))
+			response.Body = ioutil.NopCloser(strings.NewReader(resp_internal_err))
 			return
 		}
 
@@ -77,6 +85,7 @@ func getHandler(r *http.Request) {
 			file_info_str += file.Name() + " "
 		}
 		response.StatusCode = http.StatusOK
+		response.ContentLength = int64(len(file_info_str))
 		response.Body = ioutil.NopCloser(strings.NewReader(file_info_str))
 	} else {
 		// a file
@@ -85,10 +94,12 @@ func getHandler(r *http.Request) {
 			fmt.Println("Read file error!")
 			// Return internal server error
 			response.StatusCode = http.StatusInternalServerError
-			response.Body = ioutil.NopCloser(strings.NewReader("Internal server error"))
+			response.ContentLength = int64(len(resp_internal_err))
+			response.Body = ioutil.NopCloser(strings.NewReader(resp_internal_err))
 			return
 		}
 		response.StatusCode = http.StatusOK
+		response.ContentLength = int64(len(bytes))
 		response.Body = ioutil.NopCloser(strings.NewReader(string(bytes)))
 	}
 
@@ -96,8 +107,17 @@ func getHandler(r *http.Request) {
 
 func postHandler(r *http.Request) {
 	fmt.Println("Invoke POST Handler")
+	response := r.Response
 	url := r.URL.Path
 	fmt.Println("URL: ", url)
+	pwd, _ := os.Getwd()
+	url = pwd + url
+	content := r.Body
+	fmt.Println("Content: ", content)
+	//TODO: save file to local root directory
+	// TODO: check file type
+	response.StatusCode = http.StatusOK
+
 }
 
 func unsupportedMethodHandler(r *http.Request) {
@@ -113,60 +133,65 @@ func ListenAndServe(address string, root string) error {
 	if err != nil {
 		fmt.Println("Listen is err!: ", err)
 	}
-	defer listener.Close()
+	// defer listener.Close()
 	fmt.Println("Listening on " + address)
 	//Todo: Add concurrency control here, maxmum 10 connections
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			fmt.Println("Accept is err!: ", err)
+			fmt.Println("Accept err!: ", err)
 		}
 		go handleConnection(conn, root)
+		connection_num += 1
+		fmt.Println("Connection number: ", connection_num)
 	}
 }
 
 func handleConnection(conn net.Conn, root string) {
 	//Create an empty buffer
 	buffer := make([]byte, 1024)
-	defer conn.Close()
+
 	// read from connection
-	msg, err := conn.Read(buffer)
-	if err != nil {
-		// handle error
-		fmt.Println("connection err!:", err)
-		return
+	for {
+		msg, err := conn.Read(buffer)
+		if err != nil {
+			// handle error
+			fmt.Println("connection err!:", err)
+			conn.Close()
+			return
+		}
+		// print message
+		fmt.Println("Connection from ", conn.RemoteAddr().String())
+
+		// msg to request
+		request_str := string(buffer[:msg])
+		br := bufio.NewReader(strings.NewReader(request_str))
+		request, err_cnn := http.ReadRequest(br)
+
+		if err_cnn != nil {
+			fmt.Println("Request err:", err)
+			return
+		}
+
+		request.Response = new(http.Response)
+
+		fmt.Println("Request Method:\n", request.Method) // "GET", "POST"
+		fmt.Println("Request content:\n", request.URL)
+
+		// Handle request with function handleRequest, only GET and POST. Other methods should return 405.
+
+		if request.Method == "GET" {
+			getHandler(request)
+		} else if request.Method == "POST" {
+			postHandler(request)
+		} else {
+			unsupportedMethodHandler(request)
+		}
+		request.Response.Write(conn)
+		fmt.Println("Send response successfully!")
+		defer request.Response.Body.Close()
+		fmt.Println("--------------------------------------------------")
 	}
-	// print message
-	fmt.Println("Connection from ", conn.RemoteAddr().String())
-
-	// msg to request
-	request_str := string(buffer[:msg])
-	br := bufio.NewReader(strings.NewReader(request_str))
-	request, err_cnn := http.ReadRequest(br)
-
-	if err_cnn != nil {
-		fmt.Println("Request err:", err)
-		return
-	}
-
-	request.Response = new(http.Response)
-
-	fmt.Println("Request Method:\n", request.Method) // "GET", "POST"
-	fmt.Println("Request content:\n", request.URL)
-
-	// Handle request with function handleRequest, only GET and POST. Other methods should return 405.
-
-	if request.Method == "GET" {
-		getHandler(request)
-	} else if request.Method == "POST" {
-		postHandler(request)
-	} else {
-		unsupportedMethodHandler(request)
-	}
-	request.Response.Write(conn)
-	fmt.Println("Send response successfully!")
-	defer request.Response.Body.Close()
-	fmt.Println("--------------------------------------------------")
 }
 
 func main() {

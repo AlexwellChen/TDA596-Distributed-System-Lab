@@ -7,14 +7,21 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strings"
 )
 
 func main() {
-	server := "localhost:8080"
+	// user input server address
+	fmt.Println("Please enter server address:")
+	reader := bufio.NewReader(os.Stdin)
+	server, _ := reader.ReadString('\n')
+	// server := "localhost:8080"
+	// fmt.Println(strings.TrimSpace(server))
+	server = strings.TrimSpace(server)
 	tcpAddr, err := net.ResolveTCPAddr("tcp4", server)
 
 	if err != nil {
-		fmt.Println(os.Stderr, "Fatal error: ", err)
+		fmt.Println("Fatal error: ", err)
 		os.Exit(1)
 	}
 
@@ -22,32 +29,41 @@ func main() {
 	conn, err := net.DialTCP("tcp", nil, tcpAddr)
 
 	if err != nil {
-		fmt.Println(conn.RemoteAddr().String(), os.Stderr, "Fatal error:", err)
+		// if connection was refused, conn does not exist and gives a nil pointer error
+		// fmt.Println(conn.RemoteAddr().String(), os.Stderr, "Fatal error:", err)
+		fmt.Println("Fatal error:", err)
 		os.Exit(1)
 	}
-
-	defer conn.Close()
-
 	fmt.Println("connection success")
-	sender(conn)
-	fmt.Println("send over")
+	for {
+		//repeat send request until user input "exit"
+		//Ask user for input request resource and method?
+		fmt.Println("Please enter request method:")
+		method, _ := reader.ReadString('\n')
+		method = strings.TrimSpace(method)
+		fmt.Println("Please enter request resource:")
+		resource, _ := reader.ReadString('\n')
+		resource = strings.TrimSpace(resource)
+		sender(conn, method, resource)
+		fmt.Println("send over")
+	}
 
 }
 
-func sender(conn *net.TCPConn) {
+func sender(conn *net.TCPConn, method string, resource string) {
 	host_addr := conn.RemoteAddr().String()
 
-	url := "http://" + host_addr + "/root"
+	url := "http://" + host_addr + resource
 	fmt.Println("url:", url)
 
 	// Create a new request
-	request, _ := http.NewRequest("GET", url, nil)
+	request, _ := http.NewRequest(method, url, nil)
 	err := request.Write(conn)
 	if err != nil {
 		fmt.Println(conn.RemoteAddr().String(), " Error: ", err)
 		os.Exit(1)
 	}
-
+	// fmt.Println("current request:", request)
 	// Read response from connection
 	reader := bufio.NewReader(conn)
 	response, err := http.ReadResponse(reader, request)
