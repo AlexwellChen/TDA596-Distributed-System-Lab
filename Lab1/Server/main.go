@@ -92,12 +92,7 @@ func getHandler(r *http.Request) {
 		response.ContentLength = int64(len(file_info_str))
 		response.Body = ioutil.NopCloser(strings.NewReader(file_info_str))
 	} else {
-		// a file
-		//create a array to store url which is split by "/"
-		arrUrl := strings.Split(url, ".")
-		//get the last element of the array -> Ending of file name
-		//(e.g. html, txt, gif, jpeg, jpg or css)
-		fileNameEnding := arrUrl[len(arrUrl)-1]
+		// if it is a file
 		// get the file content type for transmitting them to client
 		contentType, err := getFileContentType(file)
 
@@ -106,7 +101,8 @@ func getHandler(r *http.Request) {
 		}
 
 		//check if the file is we need file
-		if fileNameEnding == "html" || fileNameEnding == "txt" || fileNameEnding == "css" || fileNameEnding == "gif" || fileNameEnding == "jpeg" || fileNameEnding == "jpg" {
+		_, valid := checkFileEnding(url)
+		if valid {
 			// TODO: check why file was closed before, has to reopen otherwise will get is empty
 			file, _ = os.Open(url)
 			content, err := ioutil.ReadAll(file)
@@ -151,18 +147,39 @@ func getHandler(r *http.Request) {
 }
 
 func postHandler(r *http.Request) {
+	// TODO: fix runtime error: invalid memory address or nil pointer dereference
 	fmt.Println("Invoke POST Handler")
 	response := r.Response
 	url := r.URL.Path
 	fmt.Println("URL: ", url)
-	pwd, _ := os.Getwd()
-	url = pwd + url
-	content := r.Body
-	fmt.Println("Content: ", content)
-	//TODO: save file to local root directory
-	// TODO: check file type
-	response.StatusCode = http.StatusOK
+	// Check file type
+	_, valid := checkFileEnding(url)
+	if valid {
+		pwd, _ := os.Getwd()
+		url = pwd + url
+		// Check if file exists
+		_, err := os.Stat(url)
+		var file *os.File
+		// if file exists, create new one
+		if err == nil {
+			fmt.Println("File exists, create new one")
+			file, err = os.Create(strings.Split(url, ".")[0] + "(1)." + strings.Split(url, ".")[1])
+		} else {
+			fmt.Println("File not exists, create new one")
+			file, err = os.Create(url)
+		}
 
+		bytes, err := ioutil.ReadAll(r.Body)
+		file.Write(bytes)
+		file.Close()
+		response.StatusCode = http.StatusOK
+		response.ContentLength = int64(len("OK"))
+		response.Body = ioutil.NopCloser(strings.NewReader("OK"))
+	} else {
+		response.StatusCode = http.StatusBadRequest
+		response.ContentLength = int64(len("Bad request"))
+		response.Body = ioutil.NopCloser(strings.NewReader("Bad request"))
+	}
 }
 
 func unsupportedMethodHandler(r *http.Request) {
@@ -266,6 +283,19 @@ func getFileContentType(out *os.File) (string, error) {
 	return contentType, nil
 }
 
+func checkFileEnding(url string) (string, bool) {
+	// Check file type
+	//create a array to store url which is split by "/"
+	arrUrl := strings.Split(url, ".")
+	//get the last element of the array -> Ending of file name
+	//(e.g. html, txt, gif, jpeg, jpg or css)
+	fileNameEnding := arrUrl[len(arrUrl)-1]
+	if fileNameEnding == "html" || fileNameEnding == "txt" || fileNameEnding == "gif" || fileNameEnding == "jpeg" || fileNameEnding == "jpg" || fileNameEnding == "css" {
+		return fileNameEnding, true
+	} else {
+		return fileNameEnding, false
+	}
+}
 func main() {
 	port := getPort()
 	if port == -1 {
