@@ -39,26 +39,22 @@ func main() {
 	for {
 		//repeat send request until user input "exit"
 		//Ask user for input request resource and method?
-		fmt.Println("Please enter request method:") //GET POST
+		fmt.Println("Please enter request method, or enter exit to exit connection:") //GET POST
 		method, _ := reader.ReadString('\n')
 		method = strings.TrimSpace(method)
+		if method == "exit" {
+			fmt.Println("Exiting connection...")
+			conn.Close()
+			break
+		}
 		fmt.Println("Please enter request resource root:") //root
-		resource, _ := reader.ReadString('\n')
-		//resource = strings.TrimSpace(resource)
-		resource = "/" + strings.TrimSpace(resource)
+		root, _ := reader.ReadString('\n')
+		root = "/" + strings.TrimSpace(root)
 		fmt.Println("Please enter request file:") // file name
 		fileName, _ := reader.ReadString('\n')
 		fileName = strings.TrimSpace(fileName)
-		//if fileName == "" {
-		//	resourcePath := resource
-		//	sender(conn, method, resourcePath, fileName)
-		//} else {
-		//	resourcePath := resource + "/" + fileName
-		//	sender(conn, method, resourcePath, fileName)
-		//}
-		resourcePath := resource + "/" + fileName
 
-		sender(conn, method, resourcePath, fileName)
+		sender(conn, method, root, fileName)
 	}
 	/*	method := "GET"
 		file := "2.jpg"
@@ -69,14 +65,35 @@ func main() {
 
 }
 
-func sender(conn *net.TCPConn, method string, resource string, fileName string) {
+func sender(conn *net.TCPConn, method string, root string, fileName string) {
 	host_addr := conn.RemoteAddr().String()
 
-	url := "http://" + host_addr + resource
-	fmt.Println("url:", url)
+	url := "http://" + host_addr + root + fileName
 
 	// Create a new request
-	request, _ := http.NewRequest(method, url, nil)
+	var request *http.Request
+	if method == "GET" {
+		request, _ = http.NewRequest(method, url, nil)
+		fmt.Println("GET url:", url)
+	} else if method == "POST" {
+		pwd, _ := os.Getwd()
+		path := pwd + root + fileName
+		fmt.Println("POST local path:", path)
+		file, err := os.Open(path)
+		if err != nil {
+			fmt.Println("Can not open file: ", err)
+			return
+		}
+		bytes, err := ioutil.ReadAll(file)
+		// read bytes into io.Reader
+		// fmt.Println("Bytes:", bytes)
+		reader := strings.NewReader(string(bytes))
+		request, _ = http.NewRequest(method, url, reader)
+		file.Close()
+	} else {
+		fmt.Println("Invalid request method!")
+		return
+	}
 	err := request.Write(conn)
 	if err != nil {
 		fmt.Println(conn.RemoteAddr().String(), " Error: ", err)
@@ -103,6 +120,9 @@ func sender(conn *net.TCPConn, method string, resource string, fileName string) 
 	case http.StatusBadRequest:
 		fmt.Println("400 Bad Request")
 		break
+	case http.StatusNotFound:
+		fmt.Println("404 Not Found")
+		break
 	case http.StatusOK:
 		fmt.Println("200 OK")
 		if method == "GET" {
@@ -122,25 +142,27 @@ func sender(conn *net.TCPConn, method string, resource string, fileName string) 
 func downloadFile(response *http.Response, fileName string) {
 	// Download the file
 	fmt.Println("Response status:", response.Status)
-	fmt.Println("Response body:")
+
 	//check if file exists
 	_, err := os.Stat(fileName)
 	var file *os.File
 	if err == nil {
 		//create file
-		fmt.Println("File already exists, overwrite it")
+		fmt.Println("File already exists! Creating new file...")
 		//TODO: os.Open needs additional parameters to overwrite the file
-		file, err = os.Open(fileName)
+		// or use create filename.(1) to write to a new file
+		file, err = os.Create(strings.Split(fileName, ".")[0] + "(1)." + strings.Split(fileName, ".")[1])
 		if err != nil {
-			fmt.Println("Error openning file:", err)
+			fmt.Println("Error creating file:", err)
 		}
 	} else {
-		fmt.Println("File does not exist, create it")
-		file, _ = os.Create(fileName)
+		fmt.Println("File does not exist, creating new file...")
+		file, err = os.Create(fileName)
+		if err != nil {
+			fmt.Println("Error creating file:", err)
+		}
 	}
 	defer file.Close()
-	// _, _ = io.Copy(os.Stdout, response.Body)
 	bytes, err := ioutil.ReadAll(response.Body)
-	fmt.Println("bytes:", bytes)
 	file.Write(bytes)
 }
