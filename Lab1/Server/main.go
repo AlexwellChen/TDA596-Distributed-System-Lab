@@ -101,7 +101,11 @@ func getHandler(r *http.Request) {
 		}
 
 		//check if the file is we need file
-		_, valid := checkFileEnding(url)
+		fileEnding, valid := checkFileEnding(url)
+		// if it is a css file change the content type(because default is text/plain)
+		if fileEnding == "css"{
+			contentType = "text/css"
+		}
 		if valid {
 			// TODO: check why file was closed before, has to reopen otherwise will get is empty
 			file, _ = os.Open(url)
@@ -153,6 +157,7 @@ func postHandler(r *http.Request) {
 	url := r.URL.Path
 	fmt.Println("URL: ", url)
 	// Check file type
+	// TODO: css file type to test
 	_, valid := checkFileEnding(url)
 	if valid {
 		pwd, _ := os.Getwd()
