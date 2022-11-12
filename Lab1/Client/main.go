@@ -13,7 +13,7 @@ import (
 
 func main() {
 	// user input server address
-	fmt.Println("Please enter server address:")
+	fmt.Println("Please enter <server address>:<Port number>, e.g. 127.0.0.1:8080")
 	reader := bufio.NewReader(os.Stdin)
 	// server, _ := reader.ReadString('\n')
 	server := "localhost:8080"

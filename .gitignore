@@ -131,3 +131,4 @@ dmypy.json
 .vscode
 go.mod
 ./Server/root
+go.sum
