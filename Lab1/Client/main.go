@@ -37,6 +37,7 @@ func main() {
 	}
 	fmt.Println("connection success")
 	for {
+		// Todo: Add a UNIX style command line interface
 		//repeat send request until user input "exit"
 		//Ask user for input request resource and method?
 		fmt.Println("Please enter request method:") //GET POST
