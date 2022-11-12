@@ -14,8 +14,8 @@ func main() {
 	// user input server address
 	fmt.Println("Please enter server address:")
 	reader := bufio.NewReader(os.Stdin)
-	server, _ := reader.ReadString('\n')
-	//server := "localhost:8080"
+	// server, _ := reader.ReadString('\n')
+	server := "localhost:8080"
 	//fmt.Println(strings.TrimSpace(server))
 	server = strings.TrimSpace(server)
 	tcpAddr, err := net.ResolveTCPAddr("tcp4", server)
@@ -90,43 +90,44 @@ func sender(conn *net.TCPConn, method string, resource string, fileName string) 
 		fmt.Println("Error reading response:", err)
 	}
 	defer response.Body.Close()
-
-	// Handle response body
-	// Todo: 区分请求内容，如果是路径，需要列出目录下的文件；如果是文件，需要读取文件内容并保存到本地
-	if fileName == "" {
-		fmt.Println("Response status:", response.Status)
-		fmt.Println("The files in the directory have been listed below:")
-		_, _ = io.Copy(os.Stdout, response.Body)
-	} else {
-		fmt.Println("Response Header content type:", response.Header.Get("Content-Type"))
-		downloadFile(response, fileName)
+	switch response.StatusCode {
+	case http.StatusInternalServerError:
+		fmt.Println("500 Internal Server Error")
+		break
+	case http.StatusNotImplemented:
+		fmt.Println("501 Not Implemented")
+		break
+	case http.StatusBadGateway:
+		fmt.Println("502 Bad Gateway")
+		break
+	case http.StatusBadRequest:
+		fmt.Println("400 Bad Request")
+		break
+	case http.StatusOK:
+		fmt.Println("200 OK")
+		if method == "GET" {
+			if fileName == "" {
+				fmt.Println("The files in the directory have been listed below:")
+				_, _ = io.Copy(os.Stdout, response.Body)
+			} else {
+				fmt.Println("Response Header content type:", response.Header.Get("Content-Type"))
+				downloadFile(response, fileName)
+				fmt.Println(response.Body)
+			}
+		} else {
+			fmt.Println("Post success")
+		}
 	}
-	//downloadFile(response, fileName)
 }
 
 func downloadFile(response *http.Response, fileName string) {
-	//Based on the response.StatueCode, we can decide whether to download the file
-	if response.StatusCode == 200 {
-		fmt.Println("Response status:", response.Status)
-		fmt.Println("Response body:")
-		//create file
-		file, err := os.Create(fileName)
-		if err != nil {
-			fmt.Println("Error create file:", err)
-		}
-		defer func() { _ = file.Close() }()
-
-		//Read the content and write into file
-		copyFile, err := io.Copy(file, response.Body)
-		fmt.Println(copyFile)
-	} else if response.StatusCode == 404 {
-		fmt.Println("Response status:", response.Status)
-		fmt.Println("Not Found")
-	} else if response.StatusCode == 400 {
-		fmt.Println("Response status:", response.Status)
-		fmt.Println("Bad Request")
-	} else if response.StatusCode == 501 {
-		fmt.Println("Response status:", response.Status)
-		fmt.Println("Not Implemented")
+	// Download the file
+	fmt.Println("Response status:", response.Status)
+	fmt.Println("Response body:")
+	//create file
+	file, err := os.Create(fileName)
+	if err != nil {
+		fmt.Println("Error create file:", err)
 	}
+	defer file.Close()
 }
