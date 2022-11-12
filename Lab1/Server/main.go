@@ -101,15 +101,20 @@ func getHandler(r *http.Request) {
 		//fmt.Println("Ending of File name: ", fileNameEnding)
 		// TODO: use function to get the file content type for transmitting them to client
 		contentType, err := getFileContentType(file)
-		//response.Header.Set("Content-Type", contentType)
+
 		if err != nil {
 			fmt.Println("Get file content type error!")
 		}
-		fmt.Println("Content type: ", contentType)
+		fmt.Println("Content type and file name ending: ", contentType, fileNameEnding)
 
 		//check if the file is we need file
 		if fileNameEnding == "html" || fileNameEnding == "txt" || fileNameEnding == "css" || fileNameEnding == "gif" || fileNameEnding == "jpeg" || fileNameEnding == "jpg" {
 			bytes, err := ioutil.ReadAll(file)
+			if response.Header == nil {
+				response.Header = make(map[string][]string)
+			}
+			response.Header.Add("Content-Type", contentType)
+			fmt.Println(contentType)
 			if err != nil {
 				fmt.Println("Read file error!")
 				// Return internal server error
@@ -249,10 +254,12 @@ func handleConnection(conn net.Conn, root string) {
 func getFileContentType(out *os.File) (string, error) {
 	// Only the first 512 bytes are used to sniff the content type.
 	buffer := make([]byte, 512)
-	_, err := out.Read(buffer)
+	n, err := out.Read(buffer)
+	fmt.Println("Read file content: ", buffer)
 	if err != nil {
 		return "", err
 	}
+	buffer = buffer[:n]
 	// Use the net/http package's handy DectectContentType function. Always returns a valid
 	// content-type by returning "application/octet-stream" if no others seemed to match.
 	contentType := http.DetectContentType(buffer)
