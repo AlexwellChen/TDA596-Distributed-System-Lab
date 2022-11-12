@@ -70,6 +70,7 @@ func getHandler(r *http.Request) {
 
 	// Check if it is a directory
 	resp_internal_err := "Internal server error"
+	resp_bad_request := "Bad request"
 	if s.IsDir() {
 		// a directory
 		file_info, err := file.Readdir(-1)
@@ -92,18 +93,53 @@ func getHandler(r *http.Request) {
 		response.Body = ioutil.NopCloser(strings.NewReader(file_info_str))
 	} else {
 		// a file
-		bytes, err := ioutil.ReadAll(file)
+		//create a array to store url which is split by "/"
+		arrUrl := strings.Split(url, ".")
+		//get the last element of the array -> Ending of file name
+		//(e.g. html, txt, gif, jpeg, jpg or css)
+		fileNameEnding := arrUrl[len(arrUrl)-1]
+		//fmt.Println("Ending of File name: ", fileNameEnding)
+		// TODO: use function to get the file content type for transmitting them to client
+		contentType, err := getFileContentType(file)
+		//response.Header.Set("Content-Type", contentType)
 		if err != nil {
-			fmt.Println("Read file error!")
+			fmt.Println("Get file content type error!")
+		}
+		fmt.Println("Content type: ", contentType)
+
+		//check if the file is we need file
+		if fileNameEnding == "html" || fileNameEnding == "txt" || fileNameEnding == "css" || fileNameEnding == "gif" || fileNameEnding == "jpeg" || fileNameEnding == "jpg" {
+			bytes, err := ioutil.ReadAll(file)
+			if err != nil {
+				fmt.Println("Read file error!")
+				// Return internal server error
+				response.StatusCode = http.StatusInternalServerError
+				response.ContentLength = int64(len(resp_internal_err))
+				response.Body = ioutil.NopCloser(strings.NewReader(resp_internal_err))
+				return
+			}
+			response.StatusCode = http.StatusOK
+			response.ContentLength = int64(len(bytes))
+			response.Body = ioutil.NopCloser(strings.NewReader(string(bytes)))
+		} else {
 			// Return internal server error
-			response.StatusCode = http.StatusInternalServerError
-			response.ContentLength = int64(len(resp_internal_err))
-			response.Body = ioutil.NopCloser(strings.NewReader(resp_internal_err))
+			response.StatusCode = http.StatusBadRequest
+			response.ContentLength = int64(len(resp_bad_request))
+			response.Body = ioutil.NopCloser(strings.NewReader(resp_bad_request))
 			return
 		}
-		response.StatusCode = http.StatusOK
-		response.ContentLength = int64(len(bytes))
-		response.Body = ioutil.NopCloser(strings.NewReader(string(bytes)))
+		/*		bytes, err := ioutil.ReadAll(file)
+				if err != nil {
+					fmt.Println("Read file error!")
+					// Return internal server error
+					response.StatusCode = http.StatusInternalServerError
+					response.ContentLength = int64(len(resp_internal_err))
+					response.Body = ioutil.NopCloser(strings.NewReader(resp_internal_err))
+					return
+				}
+				response.StatusCode = http.StatusOK
+				response.ContentLength = int64(len(bytes))
+				response.Body = ioutil.NopCloser(strings.NewReader(string(bytes)))*/
 	}
 
 }
@@ -208,6 +244,19 @@ func handleConnection(conn net.Conn, root string) {
 		defer request.Response.Body.Close()
 		fmt.Println("--------------------------------------------------")
 	}
+}
+
+func getFileContentType(out *os.File) (string, error) {
+	// Only the first 512 bytes are used to sniff the content type.
+	buffer := make([]byte, 512)
+	_, err := out.Read(buffer)
+	if err != nil {
+		return "", err
+	}
+	// Use the net/http package's handy DectectContentType function. Always returns a valid
+	// content-type by returning "application/octet-stream" if no others seemed to match.
+	contentType := http.DetectContentType(buffer)
+	return contentType, nil
 }
 
 func main() {
