@@ -13,6 +13,7 @@ import (
 
 func main() {
 	// user input server address
+	//Todo: Add proxy support
 	fmt.Println("Please enter <server address>:<Port number>, e.g. 127.0.0.1:8080")
 	reader := bufio.NewReader(os.Stdin)
 	// server, _ := reader.ReadString('\n')
@@ -70,7 +71,7 @@ func main() {
 func sender(conn *net.TCPConn, method string, root string, fileName string) {
 	host_addr := conn.RemoteAddr().String()
 
-	url := "http://" + host_addr + root + "/" + "/" + fileName
+	url := "http://" + host_addr + root + "/" + fileName
 
 	// Create a new request
 	var request *http.Request
