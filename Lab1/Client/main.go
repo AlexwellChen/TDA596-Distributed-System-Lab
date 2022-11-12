@@ -3,7 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -37,7 +37,7 @@ func main() {
 func sender(conn *net.TCPConn) {
 	host_addr := conn.RemoteAddr().String()
 
-	url := "http://" + host_addr + "/root"
+	url := "http://" + host_addr + "/root/Hello world.txt"
 	fmt.Println("url:", url)
 
 	// Create a new request
@@ -58,9 +58,41 @@ func sender(conn *net.TCPConn) {
 
 	// Handle response body
 	// Todo: 区分请求内容，如果是路径，需要列出目录下的文件；如果是文件，需要读取文件内容并保存到本地
-	body, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		fmt.Println("Error reading body:", err)
+	//需要区分文件后缀类型..需要修改
+	if response.StatusCode == 200 {
+		fmt.Println("Response status:", response.Status)
+		fmt.Println("Response body:")
+		//create file
+		file, err := os.Create("Hello world.txt")
+		if err != nil {
+			fmt.Println("Error create file:", err)
+		}
+		defer func() { _ = file.Close() }()
+
+		//Read the content and write into file
+		copyFile, err := io.Copy(file, response.Body)
+		fmt.Println(copyFile)
+	} else if response.StatusCode == 404 {
+		fmt.Println("Response status:", response.Status)
+		fmt.Println("Bad Request")
+	} else if response.StatusCode == 501 {
+		fmt.Println("Response status:", response.Status)
+		fmt.Println("Not Implemented")
 	}
-	fmt.Println("Response body:\n", string(body))
+
+	/*	body, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			fmt.Println("Error reading body:", err)
+		}
+		fmt.Println("Response body:\n", string(body))*/
+	/*	list := url
+		fmt.Println(list)
+		filePath := list[1]
+		fmt.Println("filepath:", filePath)
+		info, err := os.Stat(string(filePath))
+		if err != nil {
+			fmt.Println("Error reading file:", err)
+		}
+		filename := info.Name()
+		fmt.Println("filename:", filename)*/
 }
