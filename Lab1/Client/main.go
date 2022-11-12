@@ -70,7 +70,7 @@ func main() {
 func sender(conn *net.TCPConn, method string, root string, fileName string) {
 	host_addr := conn.RemoteAddr().String()
 
-	url := "http://" + host_addr + root + "/" + fileName
+	url := "http://" + host_addr + root + "/" + "/" + fileName
 
 	// Create a new request
 	var request *http.Request
