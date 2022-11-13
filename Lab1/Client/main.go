@@ -14,10 +14,22 @@ import (
 
 func main() {
 	// user input server address
-	//Todo: Add proxy support
+	// ask for proxy support
+	fmt.Println("Please enter if you want to use proxy (y/n):")
+	reader := bufio.NewReader(os.Stdin)
+	proxyNeed, _ := reader.ReadString('\n')
+	proxyNeed = strings.TrimSpace(proxyNeed)
+	//case insensitive
+	proxyNeed = strings.ToUpper(strings.TrimSpace(proxyNeed))
+	proxyNeedYes := proxyNeed == "Y" || proxyNeed == "YES"
+	if proxyNeedYes {
+		fmt.Println("Proxy connection...")
+	} else {
+		fmt.Println("No proxy connection...")
+	}
 
 	fmt.Println("Please enter <server address>:<Port number>, e.g. 127.0.0.1:8080")
-	reader := bufio.NewReader(os.Stdin)
+	//reader := bufio.NewReader(os.Stdin)
 	// server, _ := reader.ReadString('\n')
 	server := "localhost:8080"
 	//fmt.Println(strings.TrimSpace(server))
@@ -59,11 +71,16 @@ func main() {
 		fileName, _ := reader.ReadString('\n')
 		fileName = strings.TrimSpace(fileName)
 
-		fmt.Println("proxy test:")
-		proxy(conn, root, fileName)
-		fmt.Println("proxt test end")
+		if proxyNeedYes {
+			fmt.Println("proxy test:")
+			proxy(conn, method, root, fileName)
+			fmt.Println("proxt test end")
+			//}
+		} else {
+			sender(conn, method, root, fileName)
+		}
 
-		sender(conn, method, root, fileName)
+		//sender(conn, method, root, fileName)
 		fmt.Println("--------------------------------------------------")
 	}
 	/*	method := "GET"
@@ -77,7 +94,7 @@ func main() {
 
 const HttpProxy = "http://127.0.0.1:8081"
 
-func proxy(conn *net.TCPConn, root string, fileName string) {
+func proxy(conn *net.TCPConn, method string, root string, fileName string) {
 
 	proxy := func(_ *http.Request) (*url.URL, error) {
 		return url.Parse(HttpProxy)
@@ -88,40 +105,55 @@ func proxy(conn *net.TCPConn, root string, fileName string) {
 	host_addr := conn.RemoteAddr().String()
 
 	url := "http://" + host_addr + root + "/" + fileName
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		fmt.Println("proxy request Error:", err)
-	}
-
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		fmt.Println("proxy response Error:", err)
-	}
-	defer resp.Body.Close()
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println("proxy read resp body Error:", err)
-	}
-	fmt.Println(string(body))
-	fmt.Println("Response Header content type:", resp.Header.Get("Content-Type"))
-
-	//create file
-	// check fileName is a file
-
-	if strings.Contains(fileName, ".") {
-		file, err := os.Create(fileName)
+	if method == "GET" {
+		req, err := http.NewRequest(method, url, nil)
 		if err != nil {
-			panic(err)
+			fmt.Println("proxy request Error:", err)
 		}
-		defer func() { _ = file.Close() }()
-		//write body to file
-		file.Write(body)
-	}
 
-	//TODO: check why use func download get empty file
-	//downloadFile(resp, fileName)
-	fmt.Println("proxy download file over")
+		resp, err := httpClient.Do(req)
+		if err != nil {
+			fmt.Println("proxy response Error:", err)
+		}
+		defer resp.Body.Close()
+
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			fmt.Println("proxy read resp body Error:", err)
+		}
+		fmt.Println(string(body))
+		fmt.Println("Response Header content type:", resp.Header.Get("Content-Type"))
+
+		// create file
+		// check fileName is a file
+
+		if strings.Contains(fileName, ".") {
+			file, err := os.Create(fileName)
+			if err != nil {
+				panic(err)
+			}
+			defer func() { _ = file.Close() }()
+			//write body to file
+			file.Write(body)
+		}
+
+		//TODO: check why use func download get empty file
+		//downloadFile(resp, fileName)
+		fmt.Println("Proxy download file over")
+	}else{
+		fmt.Println("Proxy only support \"GET\"")
+		req, err := http.NewRequest("Notsupport", url, nil)
+		if err != nil {
+			fmt.Println("proxy request Error:", err)
+		}
+
+		resp, err := httpClient.Do(req)
+		if err != nil {
+			fmt.Println("proxy response Error:", err)
+		}
+		fmt.Println("response status:", resp.Status)
+		defer resp.Body.Close()
+	}
 
 }
 
