@@ -39,6 +39,7 @@ func handleClientRequest(client net.Conn) {
 
 	var method, host, address string
 	fmt.Sscanf(string(buffer[:bytes.IndexByte(buffer[:], '\n')]), "%s%s", &method, &host)
+
 	hostPortURL, err := url.Parse(host)
 	if err != nil {
 		fmt.Println("Error parsing host:", err.Error())
