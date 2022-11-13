@@ -43,8 +43,9 @@ func main() {
 		//Ask user for input request resource and method?
 		fmt.Println("Please enter request method, or enter exit to exit connection:") //GET POST
 		method, _ := reader.ReadString('\n')
-		method = strings.TrimSpace(method)
-		if method == "exit" {
+		//case insensitive
+		method = strings.ToUpper(strings.TrimSpace(method)) 
+		if method == "EXIT" {
 			fmt.Println("Exiting connection...")
 			conn.Close()
 			break
@@ -78,26 +79,57 @@ func sender(conn *net.TCPConn, method string, root string, fileName string) {
 	if method == "GET" {
 		request, _ = http.NewRequest(method, url, nil)
 		// Todo: Use proxy
-
+		
 		fmt.Println("GET url:", url)
 	} else if method == "POST" {
 		pwd, _ := os.Getwd()
-		path := pwd + root + fileName
+		path := pwd + root + "/" + fileName
 		fmt.Println("POST local path:", path)
+
 		file, err := os.Open(path)
 		if err != nil {
 			fmt.Println("Can not open file: ", err)
 			return
 		}
+
+		//write file content to bytes
 		bytes, err := ioutil.ReadAll(file)
+		//fmt.Println("Bytes:", bytes) 
 		// read bytes into io.Reader
-		// fmt.Println("Bytes:", bytes)
 		reader := strings.NewReader(string(bytes))
+		//fmt.Println("reader/request.body", reader)
+		defer file.Close()
+
+		file, err = os.Open(path)
+		if err != nil {
+			fmt.Println("Can not open file: ", err)
+			return
+		}
+
+		// get the file content type for change the request header content type
+		contentType, err := getFileContentType(file)
+
+		if err != nil {
+			fmt.Println("Get file content type error!")
+		}
+
+		fileEnding, _ := checkFileEnding(url)
+		// if it is a css file change the content type(because default is text/plain)
+		if fileEnding == "css" {
+			contentType = "text/css; charset=utf-8"
+		}
+		defer file.Close()
+
 		request, _ = http.NewRequest(method, url, reader)
-		file.Close()
+
+		// add request header content type
+		request.Header.Set("Content-Type", contentType)
+		//fmt.Println("request header content type:", request.Header.Get("Content-Type"))
+
+
 	} else {
+		request, _ = http.NewRequest(method, url, nil) //unspoorted method also need to send request
 		fmt.Println("Invalid request method!")
-		return
 	}
 	err := request.Write(conn)
 	if err != nil {
@@ -170,4 +202,32 @@ func downloadFile(response *http.Response, fileName string) {
 	defer file.Close()
 	bytes, err := ioutil.ReadAll(response.Body)
 	file.Write(bytes)
+}
+
+func getFileContentType(out *os.File) (string, error) {
+	// Only the first 512 bytes are used to sniff the content type.
+	buffer := make([]byte, 512)
+	n, err := out.Read(buffer)
+	if err != nil {
+		return "", err
+	}
+	buffer = buffer[:n]
+	// Use the net/http package's handy DectectContentType function. Always returns a valid
+	// content-type by returning "application/octet-stream" if no others seemed to match.
+	contentType := http.DetectContentType(buffer)
+	return contentType, nil
+}
+
+func checkFileEnding(url string) (string, bool) {
+	// Check file type
+	//create a array to store url which is split by "/"
+	arrUrl := strings.Split(url, ".")
+	//get the last element of the array -> Ending of file name
+	//(e.g. html, txt, gif, jpeg, jpg or css)
+	fileNameEnding := arrUrl[len(arrUrl)-1]
+	if fileNameEnding == "html" || fileNameEnding == "txt" || fileNameEnding == "gif" || fileNameEnding == "jpeg" || fileNameEnding == "jpg" || fileNameEnding == "css" {
+		return fileNameEnding, true
+	} else {
+		return fileNameEnding, false
+	}
 }
