@@ -247,7 +247,11 @@ func handleConnection(conn net.Conn, root string) {
 		msg, err := conn.Read(buffer)
 		if err != nil {
 			// handle error
-			fmt.Println("connection err!:", err)
+			if err == io.EOF {
+				fmt.Println("Connection closed!")
+			} else {
+				fmt.Println("connection err!:", err)
+			}
 			conn.Close()
 			//release semaphore
 			s.Release(Weight)
@@ -283,7 +287,6 @@ func handleConnection(conn net.Conn, root string) {
 		fmt.Println("Send response successfully!")
 		defer request.Response.Body.Close()
 		fmt.Println("--------------------------------------------------")
-
 	}
 }
 
