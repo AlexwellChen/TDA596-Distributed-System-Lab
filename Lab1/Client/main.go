@@ -77,6 +77,8 @@ func sender(conn *net.TCPConn, method string, root string, fileName string) {
 	var request *http.Request
 	if method == "GET" {
 		request, _ = http.NewRequest(method, url, nil)
+		// Todo: Use proxy
+
 		fmt.Println("GET url:", url)
 	} else if method == "POST" {
 		pwd, _ := os.Getwd()
