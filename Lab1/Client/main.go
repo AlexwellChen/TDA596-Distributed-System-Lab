@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 )
@@ -14,6 +15,7 @@ import (
 func main() {
 	// user input server address
 	//Todo: Add proxy support
+
 	fmt.Println("Please enter <server address>:<Port number>, e.g. 127.0.0.1:8080")
 	reader := bufio.NewReader(os.Stdin)
 	// server, _ := reader.ReadString('\n')
@@ -44,7 +46,7 @@ func main() {
 		fmt.Println("Please enter request method, or enter exit to exit connection:") //GET POST
 		method, _ := reader.ReadString('\n')
 		//case insensitive
-		method = strings.ToUpper(strings.TrimSpace(method)) 
+		method = strings.ToUpper(strings.TrimSpace(method))
 		if method == "EXIT" {
 			fmt.Println("Exiting connection...")
 			conn.Close()
@@ -56,6 +58,10 @@ func main() {
 		fmt.Println("Please enter request file:") // file name
 		fileName, _ := reader.ReadString('\n')
 		fileName = strings.TrimSpace(fileName)
+
+		fmt.Println("proxy test:")
+		proxy(conn, root, fileName)
+		fmt.Println("proxt test end")
 
 		sender(conn, method, root, fileName)
 		fmt.Println("--------------------------------------------------")
@@ -69,6 +75,53 @@ func main() {
 
 }
 
+const HttpProxy = "http://127.0.0.1:8089"
+
+func proxy(conn *net.TCPConn, root string, fileName string) {
+	
+	proxy := func(_ *http.Request) (*url.URL, error) {
+		return url.Parse(HttpProxy)
+	}
+	httpTransport := &http.Transport{Proxy: proxy}
+
+	httpClient := &http.Client{Transport: httpTransport}
+	host_addr := conn.RemoteAddr().String()
+
+	url := "http://" + host_addr + root + "/" + fileName
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		fmt.Println("proxy request Error:", err)
+	}
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		fmt.Println("proxy response Error:", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("proxy read resp body Error:", err)
+	}
+	fmt.Println(string(body))
+	fmt.Println("Response Header content type:", resp.Header.Get("Content-Type"))
+
+	//create file
+	file, err := os.Create(fileName)
+	if err != nil {
+		panic(err)
+	}
+	defer func() { _ = file.Close() }()
+
+	//write body to file
+	file.Write(body)
+
+	//TODO: check why use func download get empty file
+	//downloadFile(resp, fileName)
+	fmt.Println("proxy download file over")
+
+}
+
 func sender(conn *net.TCPConn, method string, root string, fileName string) {
 	host_addr := conn.RemoteAddr().String()
 
@@ -79,9 +132,12 @@ func sender(conn *net.TCPConn, method string, root string, fileName string) {
 	if method == "GET" {
 		request, _ = http.NewRequest(method, url, nil)
 		// Todo: Use proxy
-		
+
 		fmt.Println("GET url:", url)
 	} else if method == "POST" {
+		//TODO: post error: use post then get -> error  and  post many times -> error
+		//TODO: post jpg file, can create file but isn't show content
+
 		pwd, _ := os.Getwd()
 		path := pwd + root + "/" + fileName
 		fmt.Println("POST local path:", path)
@@ -94,7 +150,7 @@ func sender(conn *net.TCPConn, method string, root string, fileName string) {
 
 		//write file content to bytes
 		bytes, err := ioutil.ReadAll(file)
-		//fmt.Println("Bytes:", bytes) 
+		//fmt.Println("Bytes:", bytes)
 		// read bytes into io.Reader
 		reader := strings.NewReader(string(bytes))
 		//fmt.Println("reader/request.body", reader)
@@ -125,7 +181,6 @@ func sender(conn *net.TCPConn, method string, root string, fileName string) {
 		// add request header content type
 		request.Header.Set("Content-Type", contentType)
 		//fmt.Println("request header content type:", request.Header.Get("Content-Type"))
-
 
 	} else {
 		request, _ = http.NewRequest(method, url, nil) //unspoorted method also need to send request
@@ -188,6 +243,7 @@ func downloadFile(response *http.Response, fileName string) {
 		fmt.Println("File already exists! Creating new file...")
 		//TODO: os.Open needs additional parameters to overwrite the file
 		// or use create filename.(1) to write to a new file
+		//TODO: if file(1) exists, create a new file with the file(2)?
 		file, err = os.Create(strings.Split(fileName, ".")[0] + "(1)." + strings.Split(fileName, ".")[1])
 		if err != nil {
 			fmt.Println("Error creating file:", err)
