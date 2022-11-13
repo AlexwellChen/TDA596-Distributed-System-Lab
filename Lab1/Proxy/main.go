@@ -30,14 +30,13 @@ func handleClientRequest(client net.Conn) {
 	if client == nil {
 		return
 	}
-	defer client.Close()
 	var buffer [1024]byte
-	msg, err := client.Read(buffer[:])
+	client_request_msg, err := client.Read(buffer[:])
 	if err != nil {
 		fmt.Println("Error reading client buffer:", err.Error())
 		return
 	}
-	defer client.Close()
+
 	var method, host, address string
 	fmt.Sscanf(string(buffer[:bytes.IndexByte(buffer[:], '\n')]), "%s%s", &method, &host)
 	hostPortURL, err := url.Parse(host)
@@ -47,7 +46,7 @@ func handleClientRequest(client net.Conn) {
 	}
 
 	//http访问
-	if strings.Index(hostPortURL.Host, ":") == -1 {
+	if !strings.Contains(hostPortURL.Host, ":") {
 		//host不带端口， 默认8080
 		address = hostPortURL.Host + ":8080"
 	} else {
@@ -60,14 +59,18 @@ func handleClientRequest(client net.Conn) {
 		fmt.Println("Error dialing server:", err.Error())
 		return
 	}
-	if method == "CONNECT" {
-		fmt.Fprint(client, "HTTP/1.1 200 Connection established\r\n")
-	} else {
-		server.Write(buffer[:msg])
-	}
-	//进行转发
+	defer server.Close()
+
+	// Forwarding client request to server
+	server.Write(buffer[:client_request_msg])
+
+	// Data transfer between client and server
 	go io.Copy(server, client)
 	io.Copy(client, server)
+	// Todo: Close connection when client is closed
+
+	// Unable to reach here
+	client.Close()
 	fmt.Println("Connection closed")
 	fmt.Println("--------------------------------------------------")
 }
