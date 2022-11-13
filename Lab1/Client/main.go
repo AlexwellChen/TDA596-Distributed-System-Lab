@@ -12,6 +12,8 @@ import (
 	"strings"
 )
 
+const HttpProxy = "http://127.0.0.1:8081"
+
 func main() {
 	// user input server address
 	// ask for proxy support
@@ -83,16 +85,7 @@ func main() {
 		//sender(conn, method, root, fileName)
 		fmt.Println("--------------------------------------------------")
 	}
-	/*	method := "GET"
-		file := "2.jpg"
-		resource := "/root/" + file
-		sender(conn, method, resource, file)
-		//sender(conn, method, resource)
-		fmt.Println("send over")*/
-
 }
-
-const HttpProxy = "http://127.0.0.1:8081"
 
 func proxy(conn *net.TCPConn, method string, root string, fileName string) {
 
@@ -140,7 +133,7 @@ func proxy(conn *net.TCPConn, method string, root string, fileName string) {
 		//TODO: check why use func download get empty file
 		//downloadFile(resp, fileName)
 		fmt.Println("Proxy download file over")
-	}else{
+	} else {
 		fmt.Println("Proxy only support \"GET\"")
 		req, err := http.NewRequest("Notsupport", url, nil)
 		if err != nil {
@@ -166,8 +159,6 @@ func sender(conn *net.TCPConn, method string, root string, fileName string) {
 	var request *http.Request
 	if method == "GET" {
 		request, _ = http.NewRequest(method, url, nil)
-		// Todo: Use proxy
-
 		fmt.Println("GET url:", url)
 	} else if method == "POST" {
 		//TODO: post error: use post then get -> error  and  post many times -> error
@@ -182,40 +173,38 @@ func sender(conn *net.TCPConn, method string, root string, fileName string) {
 			fmt.Println("Can not open file: ", err)
 			return
 		}
+		defer file.Close()
+		// get the file content type for change the request header content type
+		contentType, err := getFileContentType(file)
+		if err != nil {
+			fmt.Println("Get file content type error!")
+		}
 
 		//write file content to bytes
+		file, _ = os.Open(path)
 		bytes, err := ioutil.ReadAll(file)
 		//fmt.Println("Bytes:", bytes)
 		// read bytes into io.Reader
 		reader := strings.NewReader(string(bytes))
-		//fmt.Println("reader/request.body", reader)
-		defer file.Close()
-
-		file, err = os.Open(path)
-		if err != nil {
-			fmt.Println("Can not open file: ", err)
-			return
-		}
-
-		// get the file content type for change the request header content type
-		contentType, err := getFileContentType(file)
-
-		if err != nil {
-			fmt.Println("Get file content type error!")
-		}
+		// fmt.Println("reader/request.body", reader)
 
 		fileEnding, _ := checkFileEnding(url)
 		// if it is a css file change the content type(because default is text/plain)
 		if fileEnding == "css" {
 			contentType = "text/css; charset=utf-8"
 		}
-		defer file.Close()
 
-		request, _ = http.NewRequest(method, url, reader)
-
+		request, err = http.NewRequest(method, url, reader)
+		if err != nil {
+			fmt.Println("New request error:", err)
+		}
+		defer request.Body.Close()
 		// add request header content type
-		request.Header.Set("Content-Type", contentType)
-		//fmt.Println("request header content type:", request.Header.Get("Content-Type"))
+
+		request.Header.Add("Content-Type", contentType)
+		fmt.Println("contentType:", request.Header.Get("Content-Type"))
+		// Content-Length is set automatically by http.NewRequest
+		fmt.Println("POST upload bytes length:", request.ContentLength)
 
 	} else {
 		request, _ = http.NewRequest(method, url, nil) //unspoorted method also need to send request
@@ -293,6 +282,7 @@ func downloadFile(response *http.Response, fileName string) {
 	defer file.Close()
 	bytes, err := ioutil.ReadAll(response.Body)
 	file.Write(bytes)
+	fmt.Println("Bytes:", bytes)
 }
 
 func getFileContentType(out *os.File) (string, error) {

@@ -23,6 +23,17 @@ const (
 // global variable semaphore
 var s = semaphore.NewWeighted(Limit)
 
+func main() {
+	port := getPort()
+	if port == -1 {
+		fmt.Println("Please state port number!")
+		return
+	}
+	addr := "127.0.0.1:" + strconv.Itoa(port)
+	root := "./root"
+	ListenAndServe(addr, root)
+}
+
 // Get port number from command line
 func getPort() int {
 	args := os.Args
@@ -38,6 +49,7 @@ func getPort() int {
 	return port
 }
 
+// Handler for GET request
 func getHandler(r *http.Request) {
 	fmt.Println("Invoke GET Handler")
 	response := r.Response
@@ -120,10 +132,9 @@ func getHandler(r *http.Request) {
 				return
 			}
 			if response.Header == nil {
-				response.Header = make(map[string][]string)
+				response.Header = make(http.Header)
 			}
 			response.Header.Add("Content-Type", contentType)
-			fmt.Println(contentType)
 			response.StatusCode = http.StatusOK
 			response.ContentLength = int64(len(content))
 			fmt.Println("Content length: ", response.ContentLength)
@@ -135,22 +146,11 @@ func getHandler(r *http.Request) {
 			response.Body = ioutil.NopCloser(strings.NewReader(resp_bad_request))
 			return
 		}
-		/*		bytes, err := ioutil.ReadAll(file)
-				if err != nil {
-					fmt.Println("Read file error!")
-					// Return internal server error
-					response.StatusCode = http.StatusInternalServerError
-					response.ContentLength = int64(len(resp_internal_err))
-					response.Body = ioutil.NopCloser(strings.NewReader(resp_internal_err))
-					return
-				}
-				response.StatusCode = http.StatusOK
-				response.ContentLength = int64(len(bytes))
-				response.Body = ioutil.NopCloser(strings.NewReader(string(bytes)))*/
 	}
 
 }
 
+// Handler for POST request
 func postHandler(r *http.Request) {
 	// TODO: fix runtime error: invalid memory address or nil pointer dereference
 	fmt.Println("Invoke POST Handler")
@@ -160,36 +160,24 @@ func postHandler(r *http.Request) {
 
 	url := r.URL.Path
 	fmt.Println("URL: ", url)
+
+	bodylength := r.ContentLength
+	fmt.Println("Body length: ", bodylength)
 	// Check file type
 	// TODO: css file type to test
 	_, valid := checkFileEnding(url)
+
 	if valid {
 		pwd, _ := os.Getwd()
 		url = pwd + url
 		// Check if file exists
-		_, err := os.Stat(url)
-		var file *os.File
-		// if file exists, create new one
-		if err == nil {
-			fmt.Println("File exists, create new one")
-			file, err = os.Create(strings.Split(url, ".")[0] + "(1)." + strings.Split(url, ".")[1])
-			if err != nil {
-				fmt.Println("Error creating file:", err)
-			}
-		} else {
-			fmt.Println("File not exists, create new one")
-			file, err = os.Create(url)
-			if err != nil {
-				fmt.Println("Error creating file:", err)
-			}
+		err := downloadFile(r, url)
+		if err != nil {
+			fmt.Println("Download file error: ", err)
+			response.StatusCode = http.StatusInternalServerError
+			return
 		}
-		defer file.Close()
-		// write to file
-		n, err := io.Copy(file, r.Body)
-		fmt.Println(n, err)
-		/* bytes, err := ioutil.ReadAll(r.Body)
-		file.Write(bytes) */
-		//file.Close()
+
 		response.StatusCode = http.StatusOK
 		response.ContentLength = int64(len("OK"))
 		response.Body = ioutil.NopCloser(strings.NewReader("OK"))
@@ -318,13 +306,33 @@ func checkFileEnding(url string) (string, bool) {
 	}
 }
 
-func main() {
-	port := getPort()
-	if port == -1 {
-		fmt.Println("Please state port number!")
-		return
+func downloadFile(request *http.Request, fileName string) error {
+	// Download the file
+
+	//check if file exists
+	_, err := os.Stat(fileName)
+	var file *os.File
+	if err == nil {
+		//create file
+		fmt.Println("File already exists! Creating new file...")
+		//TODO: os.Open needs additional parameters to overwrite the file
+		// or use create filename.(1) to write to a new file
+		//TODO: if file(1) exists, create a new file with the file(2)?
+		file, err = os.Create(strings.Split(fileName, ".")[0] + "(1)." + strings.Split(fileName, ".")[1])
+		if err != nil {
+			fmt.Println("Error creating file:", err)
+		}
+	} else {
+		fmt.Println("File does not exist, creating new file...")
+		file, err = os.Create(fileName)
+		if err != nil {
+			fmt.Println("Error creating file:", err)
+		}
 	}
-	addr := "127.0.0.1:" + strconv.Itoa(port)
-	root := "./root"
-	ListenAndServe(addr, root)
+	defer file.Close()
+	bytes, err := ioutil.ReadAll(request.Body)
+	_, err = file.Write(bytes)
+	fmt.Println("POST download Bytes length:", len(bytes))
+	fmt.Println("request content-length:", request.ContentLength)
+	return err
 }
