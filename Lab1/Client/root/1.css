@@ -1,0 +1,26 @@
+body {
+    background-color:#d0e4fe;
+}
+h1 {
+    color:orange;
+    text-align:center;
+}
+p {
+    font-family:"Times New Roman";
+    font-size:20px;
+}
+ul.a {list-style-type: circle;}
+ul.b {list-style-type: square;}
+ 
+ol.c {list-style-type: upper-roman;}
+ol.d {list-style-type: lower-alpha;}
+
+table
+{
+    border-collapse:collapse;
+}
+table,th, td
+{
+    border: 1px solid black;
+}
+
