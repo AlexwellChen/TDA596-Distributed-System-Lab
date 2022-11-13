@@ -75,10 +75,10 @@ func main() {
 
 }
 
-const HttpProxy = "http://127.0.0.1:8089"
+const HttpProxy = "http://127.0.0.1:8081"
 
 func proxy(conn *net.TCPConn, root string, fileName string) {
-	
+
 	proxy := func(_ *http.Request) (*url.URL, error) {
 		return url.Parse(HttpProxy)
 	}
@@ -107,14 +107,17 @@ func proxy(conn *net.TCPConn, root string, fileName string) {
 	fmt.Println("Response Header content type:", resp.Header.Get("Content-Type"))
 
 	//create file
-	file, err := os.Create(fileName)
-	if err != nil {
-		panic(err)
-	}
-	defer func() { _ = file.Close() }()
+	// check fileName is a file
 
-	//write body to file
-	file.Write(body)
+	if strings.Contains(fileName, ".") {
+		file, err := os.Create(fileName)
+		if err != nil {
+			panic(err)
+		}
+		defer func() { _ = file.Close() }()
+		//write body to file
+		file.Write(body)
+	}
 
 	//TODO: check why use func download get empty file
 	//downloadFile(resp, fileName)

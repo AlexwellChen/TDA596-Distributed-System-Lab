@@ -132,9 +132,9 @@ dmypy.json
 go.mod
 ./Server/root
 go.sum
-./Client/*.txt
-./Client/*.jpeg
-./Client/*.html
-./Client/*.css
-./Client/*.jpg
-./Client/*.gif
+Lab1/Client/*.txt
+Lab1/Client/*.jpeg
+Lab1/Client/*.html
+Lab1/Client/*.css
+Lab1/Client/*.jpg
+Lab1/Client/*.gif
