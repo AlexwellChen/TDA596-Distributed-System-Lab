@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -103,8 +104,8 @@ func getHandler(r *http.Request) {
 		//check if the file is we need file
 		fileEnding, valid := checkFileEnding(url)
 		// if it is a css file change the content type(because default is text/plain)
-		if fileEnding == "css"{
-			contentType = "text/css"
+		if fileEnding == "css" {
+			contentType = "text/css; charset=utf-8"
 		}
 		if valid {
 			// TODO: check why file was closed before, has to reopen otherwise will get is empty
@@ -154,6 +155,9 @@ func postHandler(r *http.Request) {
 	// TODO: fix runtime error: invalid memory address or nil pointer dereference
 	fmt.Println("Invoke POST Handler")
 	response := r.Response
+	//test Content-Type
+	fmt.Println("Request header content type: ", r.Header.Get("Content-Type"))
+
 	url := r.URL.Path
 	fmt.Println("URL: ", url)
 	// Check file type
@@ -169,14 +173,23 @@ func postHandler(r *http.Request) {
 		if err == nil {
 			fmt.Println("File exists, create new one")
 			file, err = os.Create(strings.Split(url, ".")[0] + "(1)." + strings.Split(url, ".")[1])
+			if err != nil {
+				fmt.Println("Error creating file:", err)
+			}
 		} else {
 			fmt.Println("File not exists, create new one")
 			file, err = os.Create(url)
+			if err != nil {
+				fmt.Println("Error creating file:", err)
+			}
 		}
-
-		bytes, err := ioutil.ReadAll(r.Body)
-		file.Write(bytes)
-		file.Close()
+		defer file.Close()
+		// write to file
+		n, err := io.Copy(file, r.Body)
+		fmt.Println(n, err)
+		/* bytes, err := ioutil.ReadAll(r.Body)
+		file.Write(bytes) */
+		//file.Close()
 		response.StatusCode = http.StatusOK
 		response.ContentLength = int64(len("OK"))
 		response.Body = ioutil.NopCloser(strings.NewReader("OK"))
@@ -189,7 +202,7 @@ func postHandler(r *http.Request) {
 
 func unsupportedMethodHandler(r *http.Request) {
 	response := r.Response
-	response.StatusCode = http.StatusMethodNotAllowed
+	response.StatusCode = http.StatusNotImplemented //501
 	response.Body = ioutil.NopCloser(strings.NewReader("Method not allowed"))
 	fmt.Println("Unsupported method!")
 }
@@ -259,7 +272,6 @@ func handleConnection(conn net.Conn, root string) {
 		fmt.Println("Request content:\n", request.URL)
 
 		// Handle request with function handleRequest, only GET and POST. Other methods should return 405.
-
 		if request.Method == "GET" {
 			getHandler(request)
 		} else if request.Method == "POST" {
@@ -271,6 +283,7 @@ func handleConnection(conn net.Conn, root string) {
 		fmt.Println("Send response successfully!")
 		defer request.Response.Body.Close()
 		fmt.Println("--------------------------------------------------")
+
 	}
 }
 
@@ -301,6 +314,7 @@ func checkFileEnding(url string) (string, bool) {
 		return fileNameEnding, false
 	}
 }
+
 func main() {
 	port := getPort()
 	if port == -1 {
