@@ -88,7 +88,7 @@ func handleClientRequest(client net.Conn) {
 			address = hostPortURL.Host
 		}
 
-		//获得了请求的host和port，就开始拨号吧
+		//Construct server
 		server, err := net.Dial("tcp", address)
 		if err != nil {
 			// Return internal server error
