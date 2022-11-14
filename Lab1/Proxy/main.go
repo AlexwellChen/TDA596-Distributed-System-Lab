@@ -138,7 +138,13 @@ func handleClientRequest(client net.Conn) {
 		// Copy server response body to client response
 		client_request.Response.StatusCode = server_response.StatusCode
 		content, err := ioutil.ReadAll(server_response.Body)
-
+		// Copy server response header content type to client response
+		contentType := server_response.Header.Get("Content-Type")
+		if client_request.Response.Header == nil {
+			client_request.Response.Header = make(http.Header)
+		}
+		client_request.Response.Header.Add("Content-Type", contentType)
+		//fmt.Println("Response Header Content-Type: ", client_request.Response.Header.Get("Content-Type"))
 		// fmt.Println("------------------Content test------------------")
 		// fmt.Println("content:", string(content))
 
