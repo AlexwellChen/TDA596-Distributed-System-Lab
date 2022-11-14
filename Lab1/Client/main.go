@@ -98,55 +98,34 @@ func proxy(conn *net.TCPConn, method string, root string, fileName string) {
 	host_addr := conn.RemoteAddr().String()
 
 	url := "http://" + host_addr + root + "/" + fileName
-	if method == "GET" {
-		req, err := http.NewRequest(method, url, nil)
-		if err != nil {
-			fmt.Println("proxy request Error:", err)
-		}
 
-		resp, err := httpClient.Do(req)
-		if err != nil {
-			fmt.Println("proxy response Error:", err)
-		}
-		defer resp.Body.Close()
-
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			fmt.Println("proxy read resp body Error:", err)
-		}
-		fmt.Println(string(body))
-		fmt.Println("Response Header content type:", resp.Header.Get("Content-Type"))
-
-		// create file
-		// check fileName is a file
-
-		if strings.Contains(fileName, ".") {
-			file, err := os.Create(fileName)
-			if err != nil {
-				panic(err)
-			}
-			defer func() { _ = file.Close() }()
-			//write body to file
-			file.Write(body)
-		}
-
-		//TODO: check why use func download get empty file
-		//downloadFile(resp, fileName)
-		fmt.Println("Proxy download file over")
-	} else {
-		fmt.Println("Proxy only support \"GET\"")
-		req, err := http.NewRequest("Notsupport", url, nil)
-		if err != nil {
-			fmt.Println("proxy request Error:", err)
-		}
-
-		resp, err := httpClient.Do(req)
-		if err != nil {
-			fmt.Println("proxy response Error:", err)
-		}
-		fmt.Println("response status:", resp.Status)
-		defer resp.Body.Close()
+	req, err := http.NewRequest(method, url, nil)
+	if err != nil {
+		fmt.Println("proxy request Error:", err)
 	}
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		fmt.Println("proxy response Error:", err)
+	}
+	defer resp.Body.Close()
+
+	// create file
+	// check fileName is a file or a directory
+	if resp.StatusCode == 200 {
+		if fileName == "" {
+			fmt.Println("The files in the directory have been listed below:")
+			_, _ = io.Copy(os.Stdout, resp.Body)
+		} else {
+			fmt.Println("Response Header content type:", resp.Header.Get("Content-Type"))
+			downloadFile(resp, fileName)
+		}
+	}else{
+		fmt.Println("Proxy only resonse to GET method\n The StatusCode is:", resp.StatusCode)
+		fmt.Println("501 Not Implemented")
+	}
+
+	fmt.Println("Proxy success")
 
 }
 
@@ -183,6 +162,9 @@ func sender(conn *net.TCPConn, method string, root string, fileName string) {
 		//write file content to bytes
 		file, _ = os.Open(path)
 		bytes, err := ioutil.ReadAll(file)
+		if err != nil {
+			fmt.Println("Read file error!")
+		}
 		//fmt.Println("Bytes:", bytes)
 		// read bytes into io.Reader
 		reader := strings.NewReader(string(bytes))
@@ -281,6 +263,9 @@ func downloadFile(response *http.Response, fileName string) {
 	}
 	defer file.Close()
 	bytes, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		fmt.Println("Error reading response body:", err)
+	}
 	file.Write(bytes)
 	fmt.Println("Bytes:", bytes)
 }
