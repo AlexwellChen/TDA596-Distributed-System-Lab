@@ -50,7 +50,7 @@ func getPort() int {
 }
 
 // Handler for GET request
-func getHandler(r *http.Request) {
+func getHandler(r *http.Request) (StatusCode int) {
 	fmt.Println("Invoke GET Handler")
 	response := r.Response
 
@@ -66,7 +66,7 @@ func getHandler(r *http.Request) {
 		response.StatusCode = http.StatusNotFound
 		response.ContentLength = int64(len(resp_not_found))
 		response.Body = ioutil.NopCloser(strings.NewReader(resp_not_found))
-		return
+		return response.StatusCode
 	}
 
 	// Check if file or directory could be read
@@ -77,7 +77,7 @@ func getHandler(r *http.Request) {
 		response.StatusCode = http.StatusNotFound
 		response.ContentLength = int64(len(resp_not_found))
 		response.Body = ioutil.NopCloser(strings.NewReader(resp_not_found))
-		return
+		return response.StatusCode
 	}
 	defer file.Close()
 
@@ -93,7 +93,7 @@ func getHandler(r *http.Request) {
 			response.StatusCode = http.StatusInternalServerError
 			response.ContentLength = int64(len(resp_internal_err))
 			response.Body = ioutil.NopCloser(strings.NewReader(resp_internal_err))
-			return
+			return response.StatusCode
 		}
 
 		// file_info to string
@@ -144,16 +144,16 @@ func getHandler(r *http.Request) {
 			response.StatusCode = http.StatusBadRequest
 			response.ContentLength = int64(len(resp_bad_request))
 			response.Body = ioutil.NopCloser(strings.NewReader(resp_bad_request))
-			return
 		}
 	}
-
+	return response.StatusCode
 }
 
 // Handler for POST request
-func postHandler(r *http.Request) {
+func postHandler(r *http.Request) (StatusCode int) {
 	// TODO: fix runtime error: invalid memory address or nil pointer dereference
 	fmt.Println("Invoke POST Handler")
+
 	response := r.Response
 	//test Content-Type
 	fmt.Println("Request header content type: ", r.Header.Get("Content-Type"))
@@ -162,7 +162,7 @@ func postHandler(r *http.Request) {
 	fmt.Println("URL: ", url)
 
 	bodylength := r.ContentLength
-	fmt.Println("Body length: ", bodylength)
+	fmt.Println("Contentent length: ", bodylength)
 	// Check file type
 	// TODO: css file type to test
 	_, valid := checkFileEnding(url)
@@ -171,7 +171,11 @@ func postHandler(r *http.Request) {
 		pwd, _ := os.Getwd()
 		url = pwd + url
 		// Check if file exists
-		err := downloadFile(r, url)
+		// err := downloadFile(r, url)
+
+		reqBody, err := ioutil.ReadAll(r.Body)
+		// print thr length of request body
+		fmt.Println("Request body length: ", len(reqBody))
 		if err != nil {
 			fmt.Println("Download file error: ", err)
 			response.StatusCode = http.StatusInternalServerError
@@ -186,13 +190,16 @@ func postHandler(r *http.Request) {
 		response.ContentLength = int64(len("Bad request"))
 		response.Body = ioutil.NopCloser(strings.NewReader("Bad request"))
 	}
+	return response.StatusCode
 }
 
-func unsupportedMethodHandler(r *http.Request) {
+// Handler for other request, return status code
+func unsupportedMethodHandler(r *http.Request) (StatusCode int) {
 	response := r.Response
 	response.StatusCode = http.StatusNotImplemented //501
 	response.Body = ioutil.NopCloser(strings.NewReader("Method not allowed"))
 	fmt.Println("Unsupported method!")
+	return response.StatusCode
 }
 
 func ListenAndServe(address string, root string) error {
@@ -264,15 +271,16 @@ func handleConnection(conn net.Conn, root string) {
 		fmt.Println("Request content:\n", request.URL)
 
 		// Handle request with function handleRequest, only GET and POST. Other methods should return 405.
+		var respCode int
 		if request.Method == "GET" {
-			getHandler(request)
+			respCode = getHandler(request)
 		} else if request.Method == "POST" {
-			postHandler(request)
+			respCode = postHandler(request)
 		} else {
-			unsupportedMethodHandler(request)
+			respCode = unsupportedMethodHandler(request)
 		}
 		request.Response.Write(conn)
-		fmt.Println("Send response successfully!")
+		fmt.Println("Send response", respCode, "successfully!")
 		defer request.Response.Body.Close()
 		fmt.Println("--------------------------------------------------")
 	}
