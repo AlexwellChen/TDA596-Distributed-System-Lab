@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -24,7 +23,8 @@ const (
 var s = semaphore.NewWeighted(Limit)
 
 func main() {
-	port := getPort()
+	// port := getPort()
+	port := 8080
 	if port == -1 {
 		fmt.Println("Please state port number!")
 		return
@@ -155,6 +155,7 @@ func postHandler(r *http.Request) (StatusCode int) {
 	fmt.Println("Invoke POST Handler")
 
 	response := r.Response
+
 	//test Content-Type
 	fmt.Println("Request header content type: ", r.Header.Get("Content-Type"))
 
@@ -171,11 +172,12 @@ func postHandler(r *http.Request) (StatusCode int) {
 		pwd, _ := os.Getwd()
 		url = pwd + url
 		// Check if file exists
-		// err := downloadFile(r, url)
+		err := downloadFile(r, url)
 
-		reqBody, err := ioutil.ReadAll(r.Body)
+		// reqBody, err := ioutil.ReadAll(r.Body)
 		// print thr length of request body
-		fmt.Println("Request body length: ", len(reqBody))
+		// fmt.Println("Request body length: ", len(reqBody))
+		// fmt.Println("Request body: ", string(reqBody))
 		if err != nil {
 			fmt.Println("Download file error: ", err)
 			response.StatusCode = http.StatusInternalServerError
@@ -234,34 +236,17 @@ func ListenAndServe(address string, root string) error {
 }
 
 func handleConnection(conn net.Conn, root string) {
-	//Create an empty buffer
-	buffer := make([]byte, 1024)
-
 	// read from connection
 	for {
-		msg, err := conn.Read(buffer)
-		if err != nil {
-			// handle error
-			if err == io.EOF {
-				fmt.Println("Connection closed!")
-			} else {
-				fmt.Println("connection err!:", err)
-			}
-			conn.Close()
-			//release semaphore
-			s.Release(Weight)
-			return
-		}
-		// print message
 		fmt.Println("Request from ", conn.RemoteAddr().String())
 
-		// msg to request
-		request_str := string(buffer[:msg])
-		br := bufio.NewReader(strings.NewReader(request_str))
+		// read request
+		// br := bufio.NewReader(strings.NewReader(request_str))
+		br := bufio.NewReaderSize(conn, 50*1024*1024) // 50MB buffer
 		request, err_cnn := http.ReadRequest(br)
 
 		if err_cnn != nil {
-			fmt.Println("Request err:", err)
+			fmt.Println("Request err:", err_cnn)
 			return
 		}
 
@@ -338,7 +323,14 @@ func downloadFile(request *http.Request, fileName string) error {
 		}
 	}
 	defer file.Close()
+
+	// Creat buffer to store the file
+
 	bytes, err := ioutil.ReadAll(request.Body)
+	if err != nil {
+		fmt.Println("Error reading file:", err)
+	}
+	// Write the file to disk
 	_, err = file.Write(bytes)
 	fmt.Println("POST download Bytes length:", len(bytes))
 	fmt.Println("request content-length:", request.ContentLength)
