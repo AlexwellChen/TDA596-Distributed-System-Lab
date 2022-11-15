@@ -3,11 +3,18 @@ run `go get -u golang.org/x/sync/semaphore` to get semaphore package
 
 #### Server
 **Start Server**
+`cd Server`
 Run server with `go run main.go <port number>`
 
 #### Client
 **Start Client**
+`cd Client`
 Run client with `go run main.go`
+
+#### Proxy
+**Start Proxy**
+`cd Proxy`
+Run proxy with `go run main.go <port number>`
 
 TODOs: 
 add content-type in request header of POST method

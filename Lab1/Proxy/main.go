@@ -5,25 +5,47 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
-	"net/url"
-	"strings"
+	"os"
+	"strconv"
 )
+
+// Get port number from command line
+func getPort() int {
+	args := os.Args
+	if len(args) != 2 {
+		fmt.Println("Arguments length error!")
+		return -1
+	}
+	port, err := strconv.Atoi(args[1])
+	if err != nil {
+		fmt.Println("Port number error!")
+		return -1
+	}
+	return port
+}
 
 func main() {
 	fmt.Println("Starting the Proxy ...")
-	listener, err := net.Listen("tcp", ":8081")
+
+	// Get port number
+	port := getPort()
+	if port == -1 {
+		fmt.Println("Please state port number!")
+		return
+	}
+	proxy_addr := "127.0.0.1:" + strconv.Itoa(port)
+
+	listener, err := net.Listen("tcp", proxy_addr)
 	if err != nil {
 		fmt.Println("Error listening:", err.Error())
 	}
 	defer listener.Close()
-	fmt.Println("Start Listening ...")
+	fmt.Println("Start Listening on: ", proxy_addr+" ...")
+	
 	for {
-
 		client, err := listener.Accept()
-
 		if err != nil {
 			fmt.Println("Error accept client: ", err.Error())
 		}
@@ -40,19 +62,15 @@ func handleClientRequest(client net.Conn) {
 		client_request_msg, err := client.Read(buffer[:])
 		if err != nil {
 			if err == io.EOF {
-				fmt.Println("Client closed connection")
 				defer client.Close()
 				fmt.Println("*******************************************************")
-				fmt.Println("--------------------Proxy over here--------------------")
+				fmt.Println("-------------------- Proxy over here ------------------")
 				fmt.Println("*******************************************************")
 			} else {
 				fmt.Println("Error reading client buffer:", err.Error())
 			}
 			return
 		}
-
-		var method, host, address string
-		fmt.Sscanf(string(buffer[:bytes.IndexByte(buffer[:], '\n')]), "%s%s", &method, &host)
 
 		//Construct client request
 		client_request, err := http.ReadRequest(bufio.NewReader(bytes.NewBuffer(buffer[:client_request_msg])))
@@ -65,31 +83,14 @@ func handleClientRequest(client net.Conn) {
 		client_request.Response = new(http.Response)
 
 		// If method is not GET, return 501
-		if method != "GET" {
+		if client_request.Method != "GET" {
 			client_request.Response.StatusCode = http.StatusNotImplemented
 			client_request.Response.Write(client)
 			return
 		}
 
-		hostPortURL, err := url.Parse(host)
-		if err != nil {
-			// Return internal server error
-			client_request.Response.StatusCode = http.StatusInternalServerError
-			client_request.Response.Write(client)
-			fmt.Println("Error parsing host:", err.Error())
-			return
-		}
-
-		//http访问
-		if !strings.Contains(hostPortURL.Host, ":") {
-			//host不带端口， 默认8080
-			address = hostPortURL.Host + ":8080"
-		} else {
-			address = hostPortURL.Host
-		}
-
 		//Construct server
-		server, err := net.Dial("tcp", address)
+		server, err := net.Dial("tcp", client_request.Host)
 		if err != nil {
 			// Return internal server error
 			client_request.Response.StatusCode = http.StatusInternalServerError
@@ -100,7 +101,9 @@ func handleClientRequest(client net.Conn) {
 		defer server.Close()
 
 		// Construct proxy to server request
-		server_request, err := http.NewRequest("GET", host, nil)
+		src_url := client_request.URL
+		fmt.Println("src_url: ", src_url)
+		server_request, err := http.NewRequest("GET", src_url.String(), nil)
 		if err != nil {
 			// Return internal server error
 			client_request.Response.StatusCode = http.StatusInternalServerError
@@ -135,22 +138,12 @@ func handleClientRequest(client net.Conn) {
 		}
 		defer server_response.Body.Close()
 
-		// Copy server response body to client response
+		// Copy server response attributes to client response
 		client_request.Response.StatusCode = server_response.StatusCode
-		content, err := ioutil.ReadAll(server_response.Body)
+		client_request.Response.ContentLength = server_response.ContentLength
+		client_request.Response.Header = server_response.Header
+		client_request.Response.Body = server_response.Body
 
-		// fmt.Println("------------------Content test------------------")
-		// fmt.Println("content:", string(content))
-
-		if err != nil {
-			// Return internal server error
-			client_request.Response.StatusCode = http.StatusInternalServerError
-			client_request.Response.Write(client)
-			fmt.Println("Error reading server response body:", err.Error())
-			return
-		}
-		client_request.Response.ContentLength = int64(len(content))
-		client_request.Response.Body = ioutil.NopCloser(strings.NewReader(string(content)))
 		// Send client response
 		err = client_request.Response.Write(client)
 		if err != nil {
