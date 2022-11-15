@@ -2,13 +2,16 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"mime/multipart"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -174,34 +177,51 @@ func sender(conn *net.TCPConn, method string, root string, fileName string) {
 			return
 		}
 		defer file.Close()
-		// get the file content type for change the request header content type
-		contentType, err := getFileContentType(file)
+
+		body := &bytes.Buffer{}
+		writer := multipart.NewWriter(body)
+		part, err := writer.CreateFormFile(fileName, filepath.Base(path))
 		if err != nil {
-			fmt.Println("Get file content type error!")
+			return
 		}
+		_, err = io.Copy(part, file)
+
+		err = writer.Close()
+		if err != nil {
+			return
+		}
+
+		// get the file content type for change the request header content type
+		// contentType, err := getFileContentType(file)
+		// if err != nil {
+		// 	fmt.Println("Get file content type error!")
+		// }
 
 		//write file content to bytes
-		file, _ = os.Open(path)
-		bytes, err := ioutil.ReadAll(file)
+		// file, _ = os.Open(path)
+		// bytes, err := ioutil.ReadAll(file)
 		//fmt.Println("Bytes:", bytes)
 		// read bytes into io.Reader
-		reader := strings.NewReader(string(bytes))
+		// reader := strings.NewReader(string(bytes))
 		// fmt.Println("reader/request.body", reader)
 
-		fileEnding, _ := checkFileEnding(url)
-		// if it is a css file change the content type(because default is text/plain)
-		if fileEnding == "css" {
-			contentType = "text/css; charset=utf-8"
-		}
+		// fileEnding, _ := checkFileEnding(url)
+		// // if it is a css file change the content type(because default is text/plain)
+		// if fileEnding == "css" {
+		// 	contentType = "text/css; charset=utf-8"
+		// }
 
-		request, err = http.NewRequest(method, url, reader)
+		// Use maxBytesReader to limit the size of the request body
+		// to 10MB. This is a safeguard against denial of service attacks.
+		// maxBytesReader := http.MaxBytesReader(w, request.Body, 10<<20)
+		request, err = http.NewRequest(method, url, body)
 		if err != nil {
 			fmt.Println("New request error:", err)
 		}
 		defer request.Body.Close()
 		// add request header content type
 
-		request.Header.Add("Content-Type", contentType)
+		request.Header.Set("Content-Type", writer.FormDataContentType())
 		fmt.Println("contentType:", request.Header.Get("Content-Type"))
 		// Content-Length is set automatically by http.NewRequest
 		fmt.Println("POST upload bytes length:", request.ContentLength)
@@ -209,6 +229,7 @@ func sender(conn *net.TCPConn, method string, root string, fileName string) {
 	} else {
 		request, _ = http.NewRequest(method, url, nil) //unspoorted method also need to send request
 		fmt.Println("Invalid request method!")
+		return
 	}
 	err := request.Write(conn)
 	if err != nil {
@@ -282,7 +303,7 @@ func downloadFile(response *http.Response, fileName string) {
 	defer file.Close()
 	bytes, err := ioutil.ReadAll(response.Body)
 	file.Write(bytes)
-	fmt.Println("Bytes:", bytes)
+	// fmt.Println("Bytes:", bytes)
 }
 
 func getFileContentType(out *os.File) (string, error) {
