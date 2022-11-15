@@ -129,7 +129,7 @@ func getHandler(r *http.Request) (StatusCode int) {
 				response.StatusCode = http.StatusInternalServerError
 				response.ContentLength = int64(len(resp_internal_err))
 				response.Body = ioutil.NopCloser(strings.NewReader(resp_internal_err))
-				return
+				return response.StatusCode
 			}
 			if response.Header == nil {
 				response.Header = make(http.Header)
@@ -181,7 +181,7 @@ func postHandler(r *http.Request) (StatusCode int) {
 		if err != nil {
 			fmt.Println("Download file error: ", err)
 			response.StatusCode = http.StatusInternalServerError
-			return
+			return response.StatusCode
 		}
 
 		response.StatusCode = http.StatusOK

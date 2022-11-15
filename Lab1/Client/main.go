@@ -2,16 +2,13 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
-	"mime/multipart"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
-	"path/filepath"
 	"strings"
 )
 
@@ -156,51 +153,37 @@ func sender(conn *net.TCPConn, method string, root string, fileName string) {
 			return
 		}
 		defer file.Close()
-
-		body := &bytes.Buffer{}
-		writer := multipart.NewWriter(body)
-		part, err := writer.CreateFormFile(fileName, filepath.Base(path))
-		if err != nil {
-			return
-		}
-		_, err = io.Copy(part, file)
-
-		err = writer.Close()
-		if err != nil {
-			return
-		}
-
 		// get the file content type for change the request header content type
-		// contentType, err := getFileContentType(file)
-		// if err != nil {
-		// 	fmt.Println("Get file content type error!")
-		// }
+		contentType, err := getFileContentType(file)
+		if err != nil {
+			fmt.Println("Get file content type error!")
+		}
 
 		//write file content to bytes
-		// file, _ = os.Open(path)
-		// bytes, err := ioutil.ReadAll(file)
+		file, _ = os.Open(path)
+		bytes, err := ioutil.ReadAll(file)
+		if err != nil {
+			fmt.Println("Read file error!")
+		}
 		//fmt.Println("Bytes:", bytes)
 		// read bytes into io.Reader
-		// reader := strings.NewReader(string(bytes))
+		reader := strings.NewReader(string(bytes))
 		// fmt.Println("reader/request.body", reader)
 
-		// fileEnding, _ := checkFileEnding(url)
-		// // if it is a css file change the content type(because default is text/plain)
-		// if fileEnding == "css" {
-		// 	contentType = "text/css; charset=utf-8"
-		// }
+		fileEnding, _ := checkFileEnding(url)
+		// if it is a css file change the content type(because default is text/plain)
+		if fileEnding == "css" {
+			contentType = "text/css; charset=utf-8"
+		}
 
-		// Use maxBytesReader to limit the size of the request body
-		// to 10MB. This is a safeguard against denial of service attacks.
-		// maxBytesReader := http.MaxBytesReader(w, request.Body, 10<<20)
-		request, err = http.NewRequest(method, url, body)
+		request, err = http.NewRequest(method, url, reader)
 		if err != nil {
 			fmt.Println("New request error:", err)
 		}
 		defer request.Body.Close()
 		// add request header content type
 
-		request.Header.Set("Content-Type", writer.FormDataContentType())
+		request.Header.Add("Content-Type", contentType)
 		fmt.Println("contentType:", request.Header.Get("Content-Type"))
 		// Content-Length is set automatically by http.NewRequest
 		fmt.Println("POST upload bytes length:", request.ContentLength)
@@ -208,7 +191,6 @@ func sender(conn *net.TCPConn, method string, root string, fileName string) {
 	} else {
 		request, _ = http.NewRequest(method, url, nil) //unspoorted method also need to send request
 		fmt.Println("Invalid request method!")
-		return
 	}
 	err := request.Write(conn)
 	if err != nil {
@@ -224,21 +206,17 @@ func sender(conn *net.TCPConn, method string, root string, fileName string) {
 	}
 	defer response.Body.Close()
 	switch response.StatusCode {
+	// go automatically breaks after first match
 	case http.StatusInternalServerError:
 		fmt.Println("500 Internal Server Error")
-		break
 	case http.StatusNotImplemented:
 		fmt.Println("501 Not Implemented")
-		break
 	case http.StatusBadGateway:
 		fmt.Println("502 Bad Gateway")
-		break
 	case http.StatusBadRequest:
 		fmt.Println("400 Bad Request")
-		break
 	case http.StatusNotFound:
 		fmt.Println("404 Not Found")
-		break
 	case http.StatusOK:
 		fmt.Println("200 OK")
 		if method == "GET" {
@@ -249,9 +227,13 @@ func sender(conn *net.TCPConn, method string, root string, fileName string) {
 				fmt.Println("Response Header content type:", response.Header.Get("Content-Type"))
 				downloadFile(response, fileName)
 			}
-		} else {
+		} else if method == "POST" {
 			fmt.Println("Post success")
+		} else {
+			fmt.Println("Invalid request method!")
 		}
+	default:
+		fmt.Println("Invalid request method!")
 	}
 }
 
