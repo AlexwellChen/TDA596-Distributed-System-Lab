@@ -12,7 +12,7 @@ import (
 )
 
 // Get port number from command line
-func getPort() int {
+func GetPort() int {
 	args := os.Args
 	if len(args) != 2 {
 		fmt.Println("Arguments length error!")
@@ -30,7 +30,7 @@ func main() {
 	fmt.Println("Starting the Proxy ...")
 
 	// Get port number
-	port := getPort()
+	port := GetPort()
 	if port == -1 {
 		fmt.Println("Please state port number!")
 		return
@@ -43,7 +43,7 @@ func main() {
 	}
 	defer listener.Close()
 	fmt.Println("Start Listening on: ", proxy_addr+" ...")
-	
+
 	for {
 		client, err := listener.Accept()
 		if err != nil {
@@ -89,7 +89,7 @@ func handleClientRequest(client net.Conn) {
 			return
 		}
 
-		//Construct server
+		//Construct server connection
 		server, err := net.Dial("tcp", client_request.Host)
 		if err != nil {
 			// Return internal server error
