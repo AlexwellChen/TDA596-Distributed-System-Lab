@@ -100,6 +100,6 @@ func HandleConnection(conn net.Conn, root string) {
 		request.Response.Write(conn)
 		fmt.Println("Send response", respCode, "successfully!")
 		defer request.Response.Body.Close()
-
+		
 	}
 }

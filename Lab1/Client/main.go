@@ -144,6 +144,8 @@ func sender(conn *net.TCPConn, method string, root string, fileName string) {
 
 	// Create a new request
 	var request *http.Request
+
+	fmt.Println("***************** Sender *****************")
 	if method == "GET" {
 		request, _ = http.NewRequest(method, url, nil)
 		fmt.Println("GET url:", url)
@@ -230,7 +232,10 @@ func sender(conn *net.TCPConn, method string, root string, fileName string) {
 		if method == "GET" {
 			if fileName == "" {
 				fmt.Println("The files in the directory have been listed below:")
-				_, _ = io.Copy(os.Stdout, response.Body)
+				// Print response body with println
+				bodyString, _ := io.ReadAll(response.Body)
+				fmt.Println(string(bodyString))
+				// _, _ = io.Copy(os.Stdout, response.Body)
 			} else {
 				fmt.Println("Response Header content type:", response.Header.Get("Content-Type"))
 				DownloadFile(response, fileName)

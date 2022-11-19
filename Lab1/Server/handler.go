@@ -10,7 +10,7 @@ import (
 
 // Handler for GET request
 func GetHandler(r *http.Request) (StatusCode int) {
-	fmt.Println("Invoke GET Handler")
+	fmt.Println("*********** Invoke GET Handler ***********")
 	response := r.Response
 
 	url := r.URL.Path
@@ -111,7 +111,7 @@ func GetHandler(r *http.Request) (StatusCode int) {
 // Handler for POST request
 func PostHandler(r *http.Request) (StatusCode int) {
 	// TODO: fix runtime error: invalid memory address or nil pointer dereference
-	fmt.Println("Invoke POST Handler")
+	fmt.Println("*********** Invoke POST Handler ***********")
 
 	response := r.Response
 
@@ -156,6 +156,7 @@ func PostHandler(r *http.Request) (StatusCode int) {
 
 // Handler for other request, return status code
 func UnsupportedMethodHandler(r *http.Request) (StatusCode int) {
+	fmt.Println("*********** Invoke StatusNotImplemented Handler ***********")
 	response := r.Response
 	response.StatusCode = http.StatusNotImplemented //501
 	response.Body = io.NopCloser(strings.NewReader("Method not allowed"))
