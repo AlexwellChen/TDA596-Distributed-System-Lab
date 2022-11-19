@@ -1,10 +1,13 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -67,4 +70,116 @@ func DownloadFile(response *http.Response, fileName string) {
 	}
 	file.Write(bytes)
 	// fmt.Println("Bytes:", bytes)
+}
+
+func SetProxyAddr() string {
+	// Get address and port number from input
+	reader := bufio.NewReader(os.Stdin)
+	args, _ := reader.ReadString('\n')
+
+	if len(args) != 2 {
+		fmt.Println("Arguments length error!")
+		return "-1"
+	}
+
+	// Address should be like "ip:portnumber" or "portnumber"
+	addr_list := strings.Split(args, ":")
+
+	if len(addr_list) == 1 {
+		// Check if the port number is valid
+		port, err := strconv.Atoi(addr_list[1])
+		if err != nil {
+			fmt.Println("Port number format error!")
+			return "-1"
+		}
+		if port < 0 || port > 65535 {
+			fmt.Println("Port number range error!")
+			return "-1"
+		}
+		return "localhost:" + addr_list[1]
+	} else if len(addr_list) == 2 {
+
+		// Check if the address is valid
+		if len(addr_list) != 2 {
+			fmt.Println("Address format error!")
+			return "-1"
+		}
+
+		// Check if the ip address is valid
+		ip := net.ParseIP(addr_list[0])
+		if ip == nil {
+			fmt.Println("IP address format error!")
+			return "-1"
+		}
+
+		// Check if the port number is valid
+		port, err := strconv.Atoi(addr_list[1])
+		if err != nil {
+			fmt.Println("Port number format error!")
+			return "-1"
+		}
+		if port < 0 || port > 65535 {
+			fmt.Println("Port number range error!")
+			return "-1"
+		}
+		return addr_list[0] + ":" + addr_list[1]
+	} else {
+		fmt.Println("Proxy Address format error! Using default address: localhost:8081")
+		return "localhost:8081"
+	}
+}
+
+// Get ip address and port number from command line
+func GetAddr() string {
+	args := os.Args
+	if len(args) != 2 {
+		fmt.Println("Arguments length error!")
+		return "-1"
+	}
+
+	// Address should be like "ip:portnumber" or "portnumber"
+	addr_list := strings.Split(args[1], ":")
+
+	if len(addr_list) == 1 {
+		// Check if the port number is valid
+		port, err := strconv.Atoi(addr_list[1])
+		if err != nil {
+			fmt.Println("Port number format error!")
+			return "-1"
+		}
+		if port < 0 || port > 65535 {
+			fmt.Println("Port number range error!")
+			return "-1"
+		}
+		return "localhost:" + addr_list[1]
+	} else if len(addr_list) == 2 {
+
+		// Check if the address is valid
+		if len(addr_list) != 2 {
+			fmt.Println("Address format error!")
+			return "-1"
+		}
+
+		// Check if the ip address is valid
+		ip := net.ParseIP(addr_list[0])
+		if ip == nil {
+			fmt.Println("IP address format error!")
+			return "-1"
+		}
+
+		// Check if the port number is valid
+		port, err := strconv.Atoi(addr_list[1])
+		if err != nil {
+			fmt.Println("Port number format error!")
+			return "-1"
+		}
+		if port < 0 || port > 65535 {
+			fmt.Println("Port number range error!")
+			return "-1"
+		}
+		return args[1]
+	} else {
+		fmt.Println("Address format error! Using default address: localhost:8080")
+		return "localhost:8080"
+	}
 }
