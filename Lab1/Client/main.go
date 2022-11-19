@@ -23,6 +23,7 @@ func main() {
 	proxyNeedYes := proxyNeed == "Y" || proxyNeed == "YES"
 	var HttpProxy string
 	if proxyNeedYes {
+		fmt.Println("If you want use default address, just press Enter")
 		fmt.Println("Please enter the proxy address:")
 		HttpProxy = SetProxyAddr()
 		if HttpProxy == "-1" {

@@ -87,9 +87,9 @@ func SetProxyAddr() string {
 
 	if len(addr_list) == 1 {
 		// Check if the port number is valid
-		port, err := strconv.Atoi(addr_list[1])
+		port, err := strconv.Atoi(strings.TrimSpace(addr_list[0]))
 		if err != nil {
-			fmt.Println("Port number format error!")
+			fmt.Println("Port number format error!, port is ", port)
 			return "-1"
 		}
 		if port < 0 || port > 65535 {
@@ -115,9 +115,9 @@ func SetProxyAddr() string {
 		} // ip address is "localhost"
 
 		// Check if the port number is valid
-		port, err := strconv.Atoi(addr_list[1])
+		port, err := strconv.Atoi(strings.TrimSpace(addr_list[1]))
 		if err != nil {
-			fmt.Println("Port number format error!")
+			fmt.Println("Port number format error!, port is ", port)
 			return "-1"
 		}
 		if port < 0 || port > 65535 {
@@ -137,19 +137,20 @@ func GetClientAddr() string {
 	reader := bufio.NewReader(os.Stdin)
 	args, _ := reader.ReadString('\n')
 
-	// Check args length
-	if len(args) != 1 {
-		fmt.Println("Arguments error!")
-		return "-1"
-	}
 	// Address should be like "ip:portnumber" or "portnumber"
 	addr_list := strings.Split(args, ":")
 
+	// Check args length
+	if len(addr_list) != 1 && len(addr_list) != 2 {
+		fmt.Println("Arguments length error! Length is ", len(addr_list))
+		return "-1"
+	}
+
 	if len(addr_list) == 1 {
 		// Check if the port number is valid
-		port, err := strconv.Atoi(addr_list[0])
+		port, err := strconv.Atoi(strings.TrimSpace(addr_list[0]))
 		if err != nil {
-			fmt.Println("Port number format error!")
+			fmt.Println("Port number format error!, port is ", port)
 			return "-1"
 		}
 		if port < 0 || port > 65535 {
@@ -168,9 +169,9 @@ func GetClientAddr() string {
 		} // ip address is "localhost"
 
 		// Check if the port number is valid
-		port, err := strconv.Atoi(addr_list[1])
+		port, err := strconv.Atoi(strings.TrimSpace(addr_list[1]))
 		if err != nil {
-			fmt.Println("Port number format error!")
+			fmt.Println("Port number format error!, port is ", port)
 			return "-1"
 		}
 		if port < 0 || port > 65535 {

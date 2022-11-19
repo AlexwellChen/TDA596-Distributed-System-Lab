@@ -25,9 +25,9 @@ func GetAddr() string {
 
 	if len(addr_list) == 1 {
 		// Check if the port number is valid
-		port, err := strconv.Atoi(addr_list[1])
+		port, err := strconv.Atoi(strings.TrimSpace(addr_list[0]))
 		if err != nil {
-			fmt.Println("Port number format error!")
+			fmt.Println("Port number format error!, port is ", port)
 			return "-1"
 		}
 		if port < 0 || port > 65535 {
@@ -53,9 +53,9 @@ func GetAddr() string {
 		} // ip address is "localhost"
 
 		// Check if the port number is valid
-		port, err := strconv.Atoi(addr_list[1])
+		port, err := strconv.Atoi(strings.TrimSpace(addr_list[1]))
 		if err != nil {
-			fmt.Println("Port number format error!")
+			fmt.Println("Port number format error!, port is ", port)
 			return "-1"
 		}
 		if port < 0 || port > 65535 {
