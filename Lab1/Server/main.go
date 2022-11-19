@@ -69,10 +69,17 @@ func HandleConnection(conn net.Conn, root string) {
 
 		// read request
 		br := bufio.NewReaderSize(conn, 50*1024*1024) // 50MB buffer
-		request, err_cnn := http.ReadRequest(br)
+		request, err_readReq := http.ReadRequest(br)
+		defer conn.Close()
 
-		if err_cnn != nil {
-			fmt.Println("Request err:", err_cnn)
+		if err_readReq != nil {
+			fmt.Println("Request err:", err_readReq)
+			// Return 400 Bad Request
+			request.Response = new(http.Response)
+			request.Response.StatusCode = 400
+			request.Response.Status = "400 Bad Request"
+			request.Response.Write(conn)
+			request.Response.Body.Close()
 			return
 		}
 
