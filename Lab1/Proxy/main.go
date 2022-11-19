@@ -9,33 +9,71 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 )
 
-// Get port number from command line
-func GetPort() int {
+// Get address and port number from command line
+func GetAddr() string {
 	args := os.Args
 	if len(args) != 2 {
 		fmt.Println("Arguments length error!")
-		return -1
+		return "-1"
 	}
-	port, err := strconv.Atoi(args[1])
-	if err != nil {
-		fmt.Println("Port number error!")
-		return -1
+
+	// Address should be like "ip:portnumber" or "portnumber"
+	addr_list := strings.Split(args[1], ":")
+
+	if len(addr_list) == 1 {
+		// Check if the port number is valid
+		port, err := strconv.Atoi(addr_list[1])
+		if err != nil {
+			fmt.Println("Port number format error!")
+			return "-1"
+		}
+		if port < 0 || port > 65535 {
+			fmt.Println("Port number range error!")
+			return "-1"
+		}
+		return "localhost:" + addr_list[1]
+	} else if len(addr_list) == 2 {
+
+		// Check if the address is valid
+		if len(addr_list) != 2 {
+			fmt.Println("Address format error!")
+			return "-1"
+		}
+
+		// Check if the ip address is valid
+		ip := net.ParseIP(addr_list[0])
+		if ip == nil {
+			fmt.Println("IP address format error!")
+			return "-1"
+		}
+
+		// Check if the port number is valid
+		port, err := strconv.Atoi(addr_list[1])
+		if err != nil {
+			fmt.Println("Port number format error!")
+			return "-1"
+		}
+		if port < 0 || port > 65535 {
+			fmt.Println("Port number range error!")
+			return "-1"
+		}
+		return args[1]
+	} else {
+		fmt.Println("Address format error! Using default address: localhost:8081")
+		return "localhost:8081"
 	}
-	return port
 }
 
 func main() {
 	fmt.Println("Starting the Proxy ...")
 
-	// Get port number
-	port := GetPort()
-	if port == -1 {
-		fmt.Println("Please state port number!")
-		return
+	proxy_addr := GetAddr()
+	if proxy_addr == "-1" {
+		os.Exit(-1)
 	}
-	proxy_addr := "127.0.0.1:" + strconv.Itoa(port)
 
 	listener, err := net.Listen("tcp", proxy_addr)
 	if err != nil {

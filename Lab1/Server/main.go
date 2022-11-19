@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"strconv"
 
 	"golang.org/x/sync/semaphore"
 )
@@ -20,13 +19,8 @@ const (
 var s = semaphore.NewWeighted(Limit)
 
 func main() {
-	// port := getPort()
-	port := 8080
-	if port == -1 {
-		fmt.Println("Please state port number!")
-		return
-	}
-	addr := "127.0.0.1:" + strconv.Itoa(port)
+	// Get address and port number from command line
+	addr := GetAddr()
 	root := "./root"
 	ListenAndServe(addr, root)
 }
