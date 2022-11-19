@@ -106,11 +106,13 @@ func SetProxyAddr() string {
 		}
 
 		// Check if the ip address is valid
-		ip := net.ParseIP(addr_list[0])
-		if ip == nil {
-			fmt.Println("IP address format error!")
-			return "-1"
-		}
+		if addr_list[0] != "localhost" {
+			ip := net.ParseIP(addr_list[0])
+			if ip == nil {
+				fmt.Println("IP address format error!")
+				return "-1"
+			}
+		} // ip address is "localhost"
 
 		// Check if the port number is valid
 		port, err := strconv.Atoi(addr_list[1])
@@ -157,11 +159,13 @@ func GetClientAddr() string {
 		return "localhost:" + addr_list[0]
 	} else if len(addr_list) == 2 {
 		// Check if the ip address is valid
-		ip := net.ParseIP(addr_list[0])
-		if ip == nil {
-			fmt.Println("IP address format error!")
-			return "-1"
-		}
+		if addr_list[0] != "localhost" {
+			ip := net.ParseIP(addr_list[0])
+			if ip == nil {
+				fmt.Println("IP address format error!")
+				return "-1"
+			}
+		} // ip address is "localhost"
 
 		// Check if the port number is valid
 		port, err := strconv.Atoi(addr_list[1])
