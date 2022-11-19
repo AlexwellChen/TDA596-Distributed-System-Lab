@@ -4,6 +4,7 @@ run `go get -u golang.org/x/sync/semaphore` to get semaphore package
 #### Server
 **Start Server**
 `cd Server`
+Run server with `go run main.go [ip address:]<port number>` 
 
 eg. `go run main.go 8080` or `go run main.go localhost:8080`
 

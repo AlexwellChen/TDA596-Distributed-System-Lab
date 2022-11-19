@@ -16,8 +16,8 @@ import (
 func GetAddr() string {
 	args := os.Args
 	if len(args) != 2 {
-		fmt.Println("Arguments length error!")
-		return "-1"
+		fmt.Println("Arguments length error! Using default address: localhost:8081")
+		return "localhost:8081"
 	}
 
 	// Address should be like "ip:portnumber" or "portnumber"
@@ -72,7 +72,8 @@ func main() {
 
 	proxy_addr := GetAddr()
 	if proxy_addr == "-1" {
-		os.Exit(-1)
+		fmt.Println("Address format error! Using default address: localhost:8081")
+		proxy_addr = "localhost:8081"
 	}
 
 	listener, err := net.Listen("tcp", proxy_addr)
@@ -80,7 +81,7 @@ func main() {
 		fmt.Println("Error listening:", err.Error())
 	}
 	defer listener.Close()
-	fmt.Println("Start Listening on: ", proxy_addr+" ...")
+	fmt.Println("Start Listening on: " + proxy_addr + " ...")
 
 	for {
 		client, err := listener.Accept()

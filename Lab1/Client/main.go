@@ -34,14 +34,15 @@ func main() {
 		fmt.Println("No proxy connection...")
 	}
 
+	fmt.Println("--------------------------------------")
 	fmt.Println("Please enter [server address]:<Port number>, e.g. 127.0.0.1:8080 or 8080")
 	fmt.Println("If you want to use default address, just press Enter")
-
-	server := GetAddr()
+	server := GetClientAddr()
 	if server == "-1" {
 		fmt.Println("Using default address: localhost:8080")
 		server = "localhost:8080"
 	}
+	fmt.Println("--------------------------------------")
 	server = strings.TrimSpace(server)
 	tcpAddr, err := net.ResolveTCPAddr("tcp4", server)
 

@@ -130,19 +130,22 @@ func SetProxyAddr() string {
 }
 
 // Get ip address and port number from command line
-func GetAddr() string {
-	args := os.Args
-	if len(args) != 2 {
-		fmt.Println("Arguments length error!")
+func GetClientAddr() string {
+	// Get address and port number from input
+	reader := bufio.NewReader(os.Stdin)
+	args, _ := reader.ReadString('\n')
+
+	// Check args length
+	if len(args) != 1 {
+		fmt.Println("Arguments error!")
 		return "-1"
 	}
-
 	// Address should be like "ip:portnumber" or "portnumber"
-	addr_list := strings.Split(args[1], ":")
+	addr_list := strings.Split(args, ":")
 
 	if len(addr_list) == 1 {
 		// Check if the port number is valid
-		port, err := strconv.Atoi(addr_list[1])
+		port, err := strconv.Atoi(addr_list[0])
 		if err != nil {
 			fmt.Println("Port number format error!")
 			return "-1"
@@ -151,15 +154,8 @@ func GetAddr() string {
 			fmt.Println("Port number range error!")
 			return "-1"
 		}
-		return "localhost:" + addr_list[1]
+		return "localhost:" + addr_list[0]
 	} else if len(addr_list) == 2 {
-
-		// Check if the address is valid
-		if len(addr_list) != 2 {
-			fmt.Println("Address format error!")
-			return "-1"
-		}
-
 		// Check if the ip address is valid
 		ip := net.ParseIP(addr_list[0])
 		if ip == nil {
@@ -177,7 +173,7 @@ func GetAddr() string {
 			fmt.Println("Port number range error!")
 			return "-1"
 		}
-		return args[1]
+		return args
 	} else {
 		fmt.Println("Address format error! Using default address: localhost:8080")
 		return "localhost:8080"
