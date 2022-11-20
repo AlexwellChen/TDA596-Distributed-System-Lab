@@ -77,11 +77,12 @@ func SetProxyAddr() string {
 	reader := bufio.NewReader(os.Stdin)
 	args, _, _ := reader.ReadLine()
 	args_str := string(args)
+	// fmt.Println(len(args_str))
 
-	/* 	if len(args) != 2 {
-		fmt.Println("Arguments length error!")
+	if len(args_str) == 0 {
+		fmt.Println("No input arguments! Using default proxy address: localhost:8080")
 		return "-1"
-	} */
+	}
 
 	// Address should be like "ip:portnumber" or "portnumber"
 	addr_list := strings.Split(args_str, ":")
@@ -142,6 +143,10 @@ func GetClientAddr() string {
 	args, _, _ := reader.ReadLine()
 	args_str := string(args)
 
+	if len(args_str) == 0 {
+		fmt.Println("No input arguments! Using default server address: localhost:8080")
+		return "-1"
+	}
 	// Address should be like "ip:portnumber" or "portnumber"
 	addr_list := strings.Split(args_str, ":")
 
