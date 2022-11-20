@@ -6,7 +6,7 @@ WORKDIR /app
 # Download Go modules
 COPY go.mod .
 COPY go.sum .
-COPY /root .
+# COPY /root .
 RUN go mod download
 
 COPY *.go ./
@@ -26,4 +26,4 @@ EXPOSE 8080
 #ENV HTTP_PORT=8081
 
 # Run
-CMD [ "/http-server" ]
+CMD [ "./http-server" ]
