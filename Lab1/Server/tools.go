@@ -79,8 +79,8 @@ func DownloadFile(request *http.Request, fileName string) error {
 // Get ip address and port number from command line
 func GetAddr() string {
 	args := os.Args
-	if len(args) != 2 {
-		fmt.Println("Arguments length error!")
+	if len(args) == 1 {
+		fmt.Println("No port number specified")
 		return "-1"
 	}
 

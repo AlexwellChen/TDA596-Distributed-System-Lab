@@ -61,7 +61,15 @@ func main() {
 		fmt.Println("Fatal error:", err)
 		os.Exit(1)
 	}
-	fmt.Println("connection success")
+	// TODO: Client does not know connection is closed by server!!
+	// Create a byte buffer and try to read from the connection
+	buf := make([]byte, 1024)
+	_, err = conn.Read(buf)
+	if err != nil {
+		fmt.Println("Fatal error:", err)
+	} else {
+		fmt.Println("Connection established!")
+	}
 	for {
 		// Todo: Add a UNIX style command line interface
 		//repeat send request until user input "exit"

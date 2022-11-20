@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"context"
 	"fmt"
 	"net"
 	"net/http"
@@ -11,12 +10,12 @@ import (
 )
 
 const (
-	Limit  = 10 // Upper limit of concurrent connections
-	Weight = 1  // Weight of each connection
+	Limit  = 1 // Upper limit of concurrent connections
+	Weight = 1 // Weight of each connection
 )
 
 // global variable semaphore
-var s = semaphore.NewWeighted(Limit)
+var sem = semaphore.NewWeighted(Limit)
 
 func main() {
 	// Get address and port number from command line
@@ -37,32 +36,29 @@ func ListenAndServe(address string, root string) error {
 	}
 	// defer listener.Close()
 	fmt.Println("Listening on " + address)
-	//Todo: Add concurrency control here, maxmum 10 connections
-	ctx := context.TODO()
-	// TODO returns a non-nil, empty Context.
-	// Code should use context.TODO when it's unclear which Context to use or it is not yet available
-	// (because the surrounding function has not yet been extended to accept a Context parameter)
-	for {
-		//acquire semaphore
 
+	for {
 		conn, err := listener.Accept()
 		if err != nil {
 			fmt.Println("Accept err!: ", err)
-		} else {
-			err = s.Acquire(ctx, Weight)
-			if err != nil {
-				fmt.Println("Semaphore full!")
-			} else {
-				fmt.Println("Request from ", conn.RemoteAddr().String())
-				go HandleConnection(conn, root)
-			}
+			continue
 		}
-
+		valid := sem.TryAcquire(Weight)
+		if !valid {
+			fmt.Println("Semaphore full! Connection is rejected!")
+			conn.Close()
+			continue
+		} else {
+			fmt.Println("Semaphore acquired!")
+			fmt.Println("Connection from ", conn.RemoteAddr().String())
+			go HandleConnection(conn, root)
+		}
 	}
 }
 
 func HandleConnection(conn net.Conn, root string) {
 	// read from connection
+	defer sem.Release(Weight)
 	for {
 		// read request
 		br := bufio.NewReaderSize(conn, 50*1024*1024) // 50MB buffer
@@ -100,6 +96,6 @@ func HandleConnection(conn net.Conn, root string) {
 		request.Response.Write(conn)
 		fmt.Println("Send response", respCode, "successfully!")
 		defer request.Response.Body.Close()
-		
+
 	}
 }
