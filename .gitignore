@@ -129,9 +129,7 @@ dmypy.json
 .pyre/
 .DS_Store
 .vscode
-go.mod
 ./Server/root
-go.sum
 *.txt
 *.jpeg
 *.html
