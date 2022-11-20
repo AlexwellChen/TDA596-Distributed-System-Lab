@@ -75,16 +75,17 @@ func DownloadFile(response *http.Response, fileName string) {
 func SetProxyAddr() string {
 	// Get address and port number from input
 	reader := bufio.NewReader(os.Stdin)
-	args, _ := reader.ReadString('\n')
+	args, _, _ := reader.ReadLine()
+	args_str := string(args)
 
-/* 	if len(args) != 2 {
+	/* 	if len(args) != 2 {
 		fmt.Println("Arguments length error!")
 		return "-1"
 	} */
 
 	// Address should be like "ip:portnumber" or "portnumber"
-	addr_list := strings.Split(args, ":")
-	
+	addr_list := strings.Split(args_str, ":")
+
 	if len(addr_list) == 1 {
 		// Check if the port number is valid
 		port, err := strconv.Atoi(strings.TrimSpace(addr_list[0]))
@@ -99,7 +100,7 @@ func SetProxyAddr() string {
 		}
 
 		//fmt.Println("url is http://localhost:" + addr_list[0][0:len(addr_list[0])-2])
-		return "http://localhost:" + addr_list[0][0:len(addr_list[0])-2]
+		return "http://localhost:" + addr_list[0]
 	} else if len(addr_list) == 2 {
 
 		// Check if the address is valid
@@ -127,7 +128,7 @@ func SetProxyAddr() string {
 			fmt.Println("Port number range error!")
 			return "-1"
 		}
-		return "http://"+ addr_list[0] + ":" + addr_list[1][0:len(addr_list[1])-2]
+		return "http://" + addr_list[0] + ":" + addr_list[1]
 	} else {
 		fmt.Println("Proxy Address format error! Using default address: localhost:8081")
 		return "http://localhost:8081"
@@ -138,10 +139,11 @@ func SetProxyAddr() string {
 func GetClientAddr() string {
 	// Get address and port number from input
 	reader := bufio.NewReader(os.Stdin)
-	args, _ := reader.ReadString('\n')
+	args, _, _ := reader.ReadLine()
+	args_str := string(args)
 
 	// Address should be like "ip:portnumber" or "portnumber"
-	addr_list := strings.Split(args, ":")
+	addr_list := strings.Split(args_str, ":")
 
 	// Check args length
 	if len(addr_list) != 1 && len(addr_list) != 2 {
@@ -181,7 +183,7 @@ func GetClientAddr() string {
 			fmt.Println("Port number range error!")
 			return "-1"
 		}
-		return args
+		return args_str
 	} else {
 		fmt.Println("Address format error! Using default address: localhost:8080")
 		return "localhost:8080"
