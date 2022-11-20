@@ -30,7 +30,7 @@ func main() {
 			fmt.Println("Using default proxy address: localhost:8081")
 			HttpProxy = "http://localhost:8081"
 		}
-		fmt.Println("Proxy address:", HttpProxy, "is connecting")
+		fmt.Println("Proxy address: "+ HttpProxy + " is connecting")
 	} else {
 		fmt.Println("No proxy connection...")
 	}
@@ -98,9 +98,12 @@ func main() {
 
 func proxy(conn *net.TCPConn, method string, root string, fileName string, HttpProxyAddr string) {
 
+	fmt.Println("http proxtaddr:", HttpProxyAddr)
 	proxy := func(_ *http.Request) (*url.URL, error) {
 		return url.Parse(HttpProxyAddr)
 	}
+	//urlparse,_ := url.Parse(HttpProxyAddr)
+	//fmt.Println("url.Parse(HttpProxyAddr):", urlparse)
 	httpTransport := &http.Transport{Proxy: proxy}
 
 	httpClient := &http.Client{Transport: httpTransport}
