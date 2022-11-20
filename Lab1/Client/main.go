@@ -30,7 +30,7 @@ func main() {
 			fmt.Println("Using default proxy address: localhost:8081")
 			HttpProxy = "http://localhost:8081"
 		}
-		fmt.Println("Proxy address: "+ HttpProxy + " is connecting")
+		fmt.Println("Proxy address: " + HttpProxy + " is connecting")
 	} else {
 		fmt.Println("No proxy connection...")
 	}
@@ -214,11 +214,12 @@ func sender(conn *net.TCPConn, method string, root string, fileName string) {
 	// fmt.Println("current request:", request)
 	// Read response from connection
 	reader := bufio.NewReader(conn)
+	// Print response
 	response, err := http.ReadResponse(reader, request)
 	if err != nil {
 		fmt.Println("Error reading response:", err)
 	}
-	defer response.Body.Close()
+
 	switch response.StatusCode {
 	// go automatically breaks after first match
 	case http.StatusInternalServerError:
@@ -252,4 +253,5 @@ func sender(conn *net.TCPConn, method string, root string, fileName string) {
 	default:
 		fmt.Println("Invalid request method!")
 	}
+	response.Body.Close()
 }
