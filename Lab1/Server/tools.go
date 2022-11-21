@@ -132,3 +132,19 @@ func GetAddr() string {
 		return "localhost:8080"
 	}
 }
+
+func SendTCPConnACK(conn net.Conn) {
+	// Send ACK to client
+	_, err := conn.Write([]byte("ACK\n"))
+	if err != nil {
+		fmt.Println("Error sending ACK to client:", err)
+	}
+}
+
+func SendTCPConnWAIT(conn net.Conn) {
+	// Send WAIT to client
+	_, err := conn.Write([]byte("WAIT\n"))
+	if err != nil {
+		fmt.Println("Error sending WAIT to client:", err)
+	}
+}

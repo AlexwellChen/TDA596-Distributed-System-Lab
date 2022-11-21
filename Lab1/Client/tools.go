@@ -194,3 +194,27 @@ func GetClientAddr() string {
 		return "localhost:8080"
 	}
 }
+
+func TestConn(conn *net.TCPConn) bool {
+	// Read ACK or WAIT from server
+	reader := bufio.NewReader(conn)
+	cnt := 0
+	for {
+		ack, err := reader.ReadString('\n')
+		if err != nil {
+			fmt.Println("Error reading ACK from server:", err)
+			return false
+		}
+		ack = strings.TrimSpace(ack)
+		if ack == "ACK" {
+			fmt.Println("ACK received from server")
+			return true
+		} else {
+			fmt.Println("Server is busy, waiting...")
+			cnt++
+		}
+		if cnt == 3 {
+			return false
+		}
+	}
+}

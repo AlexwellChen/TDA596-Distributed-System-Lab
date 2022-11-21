@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"time"
 
 	"golang.org/x/sync/semaphore"
 )
@@ -34,6 +35,7 @@ func ListenAndServe(address string, root string) error {
 	if err != nil {
 		fmt.Println("Listen is err!: ", err)
 	}
+	defer listener.Close()
 	// defer listener.Close()
 	fmt.Println("Listening on " + address)
 
@@ -46,10 +48,29 @@ func ListenAndServe(address string, root string) error {
 		valid := sem.TryAcquire(Weight)
 		if !valid {
 			fmt.Println("Semaphore full! Connection is rejected!")
-			conn.Close()
-			continue
+			testLimit := 3
+			testGap := 2 // seconds
+			time.Sleep(time.Duration(testGap) * time.Second)
+			for i := 0; i < testLimit; i++ {
+				fmt.Println(i+1, "time try to acquire semaphore...")
+				time.Sleep(time.Duration(testGap) * time.Second)
+				valid = sem.TryAcquire(Weight)
+				SendTCPConnWAIT(conn)
+				if valid {
+					fmt.Println("Semaphore acquired!")
+					SendTCPConnACK(conn)
+					fmt.Println("Connection from ", conn.RemoteAddr().String())
+					go HandleConnection(conn, root)
+					break
+				}
+			}
+			if !valid {
+				conn.Close()
+				continue
+			}
 		} else {
 			fmt.Println("Semaphore acquired!")
+			SendTCPConnACK(conn)
 			fmt.Println("Connection from ", conn.RemoteAddr().String())
 			go HandleConnection(conn, root)
 		}
