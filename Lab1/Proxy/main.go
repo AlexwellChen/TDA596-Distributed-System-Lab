@@ -132,6 +132,7 @@ func handleClientRequest(client net.Conn) {
 
 		//Construct server connection
 		server, err := net.Dial("tcp", client_request.Host)
+
 		if err != nil {
 			// Return internal server error
 			client_request.Response.StatusCode = http.StatusInternalServerError
@@ -139,7 +140,7 @@ func handleClientRequest(client net.Conn) {
 			fmt.Println("Error dialing server:", err.Error())
 			return
 		}
-		defer server.Close()
+		//defer server.Close()
 
 		// Construct proxy to server request
 		src_url := client_request.URL
@@ -159,6 +160,7 @@ func handleClientRequest(client net.Conn) {
 		}
 
 		// Send server request
+
 		err = server_request.Write(server)
 		if err != nil {
 			// Return internal server error
@@ -169,30 +171,44 @@ func handleClientRequest(client net.Conn) {
 		}
 
 		// Read server response
-		server_response, err := http.ReadResponse(bufio.NewReader(server), server_request)
+		//fmt.Println("server request: ", server_request)
+		//fmt.Println("bufio.NewReader(server): ", bufio.NewReader(server))
+		reader := bufio.NewReader(server)
+		ack, err := reader.ReadString('\n')
 		if err != nil {
-			// Return internal server error
-			client_request.Response.StatusCode = http.StatusInternalServerError
-			client_request.Response.Write(client)
-			fmt.Println("Error reading server response:", err.Error())
-			return
+			fmt.Println("Error reading ACK from server:", err)
 		}
-		defer server_response.Body.Close()
+		ack = strings.TrimSpace(ack)
+		fmt.Println("reader: ", ack)
+		if ack == "ACK" {
+			fmt.Println("ACK received from server")
+			server_response, err := http.ReadResponse(bufio.NewReader(server), server_request)
+			if err != nil {
+				// Return internal server error
+				client_request.Response.StatusCode = http.StatusInternalServerError
+				client_request.Response.Write(client)
+				fmt.Println("Error reading server response:", err.Error())
+				return
+			}
+			defer server_response.Body.Close()
 
-		// Copy server response attributes to client response
-		client_request.Response.StatusCode = server_response.StatusCode
-		client_request.Response.ContentLength = server_response.ContentLength
-		client_request.Response.Header = server_response.Header
-		client_request.Response.Body = server_response.Body
+			// Copy server response attributes to client response
+			client_request.Response.StatusCode = server_response.StatusCode
+			client_request.Response.ContentLength = server_response.ContentLength
+			client_request.Response.Header = server_response.Header
+			client_request.Response.Body = server_response.Body
 
-		// Send client response
-		err = client_request.Response.Write(client)
-		if err != nil {
-			fmt.Println("Error writing client response:", err.Error())
-			return
+			// Send client response
+			err = client_request.Response.Write(client)
+			if err != nil {
+				fmt.Println("Error writing client response:", err.Error())
+				return
+			}
+
+			defer client_request.Response.Body.Close()
+		}else {
+			fmt.Println("Server is busy, waiting...")
 		}
-
-		defer client_request.Response.Body.Close()
 	}
 
 }
