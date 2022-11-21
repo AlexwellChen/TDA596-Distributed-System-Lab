@@ -7,67 +7,7 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"os"
-	"strconv"
-	"strings"
 )
-
-// Get address and port number from command line
-func GetAddr() string {
-	args := os.Args
-	if len(args) != 2 {
-		fmt.Println("Arguments length error! Using default address: localhost:8081")
-		return "localhost:8081"
-	}
-
-	// Address should be like "ip:portnumber" or "portnumber"
-	addr_list := strings.Split(args[1], ":")
-
-	if len(addr_list) == 1 {
-		// Check if the port number is valid
-		port, err := strconv.Atoi(strings.TrimSpace(addr_list[0]))
-		if err != nil {
-			fmt.Println("Port number format error!, port is ", port)
-			return "-1"
-		}
-		if port < 0 || port > 65535 {
-			fmt.Println("Port number range error!")
-			return "-1"
-		}
-		return "localhost:" + addr_list[0]
-	} else if len(addr_list) == 2 {
-
-		// Check if the address is valid
-		if len(addr_list) != 2 {
-			fmt.Println("Address format error!")
-			return "-1"
-		}
-
-		// Check if the ip address is valid
-		if addr_list[0] != "localhost" {
-			ip := net.ParseIP(addr_list[0])
-			if ip == nil {
-				fmt.Println("IP address format error!")
-				return "-1"
-			}
-		} // ip address is "localhost"
-
-		// Check if the port number is valid
-		port, err := strconv.Atoi(strings.TrimSpace(addr_list[1]))
-		if err != nil {
-			fmt.Println("Port number format error!, port is ", port)
-			return "-1"
-		}
-		if port < 0 || port > 65535 {
-			fmt.Println("Port number range error!")
-			return "-1"
-		}
-		return args[1]
-	} else {
-		fmt.Println("Address format error! Using default address: localhost:8081")
-		return "localhost:8081"
-	}
-}
 
 func main() {
 	fmt.Println("Starting the Proxy ...")
@@ -90,11 +30,21 @@ func main() {
 		if err != nil {
 			fmt.Println("Error accept client: ", err.Error())
 		}
-		go handleClientRequest(client)
+		// Read host addr from client
+		var buffer [1024]byte
+		host_addr, _ := client.Read(buffer[:])
+		// Construct server connection
+		host_addr_str := string(buffer[:host_addr])
+		// Remove the last '\n'
+		host_addr_str = host_addr_str[:len(host_addr_str)-1]
+		server, _ := net.Dial("tcp", host_addr_str)
+		go handleClientRequest(client, server)
 	}
 }
 
-func handleClientRequest(client net.Conn) {
+func handleClientRequest(client net.Conn, server net.Conn) {
+	// server = FirstRequestHandler(client)
+	fmt.Println("Client connected: ", client.RemoteAddr())
 	for {
 		if client == nil {
 			return
@@ -104,6 +54,7 @@ func handleClientRequest(client net.Conn) {
 		if err != nil {
 			if err == io.EOF {
 				defer client.Close()
+				defer server.Close()
 				fmt.Println("*******************************************************")
 				fmt.Println("-------------------- Proxy over here ------------------")
 				fmt.Println("*******************************************************")
@@ -129,18 +80,16 @@ func handleClientRequest(client net.Conn) {
 			client_request.Response.Write(client)
 			return
 		}
-
+		
 		//Construct server connection
-		server, err := net.Dial("tcp", client_request.Host)
-
-		if err != nil {
-			// Return internal server error
-			client_request.Response.StatusCode = http.StatusInternalServerError
-			client_request.Response.Write(client)
-			fmt.Println("Error dialing server:", err.Error())
-			return
-		}
-		//defer server.Close()
+		// server, err := net.Dial("tcp", client_request.Host)
+		// if err != nil {
+		// 	// Return internal server error
+		// 	client_request.Response.StatusCode = http.StatusInternalServerError
+		// 	client_request.Response.Write(client)
+		// 	fmt.Println("Error dialing server:", err.Error())
+		// 	return
+		// }
 
 		// Construct proxy to server request
 		src_url := client_request.URL
@@ -160,7 +109,6 @@ func handleClientRequest(client net.Conn) {
 		}
 
 		// Send server request
-
 		err = server_request.Write(server)
 		if err != nil {
 			// Return internal server error
@@ -171,44 +119,30 @@ func handleClientRequest(client net.Conn) {
 		}
 
 		// Read server response
-		//fmt.Println("server request: ", server_request)
-		//fmt.Println("bufio.NewReader(server): ", bufio.NewReader(server))
-		reader := bufio.NewReader(server)
-		ack, err := reader.ReadString('\n')
+		server_response, err := http.ReadResponse(bufio.NewReader(server), server_request)
 		if err != nil {
-			fmt.Println("Error reading ACK from server:", err)
+			// Return internal server error
+			client_request.Response.StatusCode = http.StatusInternalServerError
+			client_request.Response.Write(client)
+			fmt.Println("Error reading server response:", err.Error())
+			return
 		}
-		ack = strings.TrimSpace(ack)
-		fmt.Println("reader: ", ack)
-		if ack == "ACK" {
-			fmt.Println("ACK received from server")
-			server_response, err := http.ReadResponse(bufio.NewReader(server), server_request)
-			if err != nil {
-				// Return internal server error
-				client_request.Response.StatusCode = http.StatusInternalServerError
-				client_request.Response.Write(client)
-				fmt.Println("Error reading server response:", err.Error())
-				return
-			}
-			defer server_response.Body.Close()
+		defer server_response.Body.Close()
 
-			// Copy server response attributes to client response
-			client_request.Response.StatusCode = server_response.StatusCode
-			client_request.Response.ContentLength = server_response.ContentLength
-			client_request.Response.Header = server_response.Header
-			client_request.Response.Body = server_response.Body
+		// Copy server response attributes to client response
+		client_request.Response.StatusCode = server_response.StatusCode
+		client_request.Response.ContentLength = server_response.ContentLength
+		client_request.Response.Header = server_response.Header
+		client_request.Response.Body = server_response.Body
 
-			// Send client response
-			err = client_request.Response.Write(client)
-			if err != nil {
-				fmt.Println("Error writing client response:", err.Error())
-				return
-			}
-
-			defer client_request.Response.Body.Close()
-		}else {
-			fmt.Println("Server is busy, waiting...")
+		// Send client response
+		err = client_request.Response.Write(client)
+		if err != nil {
+			fmt.Println("Error writing client response:", err.Error())
+			return
 		}
+
+		defer client_request.Response.Body.Close()
 	}
 
 }

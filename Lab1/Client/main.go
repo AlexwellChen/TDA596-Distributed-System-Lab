@@ -6,7 +6,6 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"net/url"
 	"os"
 	"strings"
 )
@@ -30,7 +29,7 @@ func main() {
 			fmt.Println("Using default proxy address: localhost:8081")
 			HttpProxy = "localhost:8081"
 		}
-		fmt.Println("Proxy address: " + HttpProxy + " is connecting")
+		fmt.Println("Proxy address:", HttpProxy, "is connecting")
 	} else {
 		fmt.Println("No proxy connection...")
 	}
@@ -52,22 +51,32 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Connect to server
-	conn, err := net.DialTCP("tcp", nil, tcpAddr)
+	// Connect to server or proxy
+	if proxyNeedYes {
+		// use proxy
+		proxyTCPAddr, err := net.ResolveTCPAddr("tcp4", HttpProxy)
+		if err != nil {
+			fmt.Println("Fatal error: ", err)
+			os.Exit(1)
+		}
+		tcpAddr = proxyTCPAddr
+	}
 
+	conn, err := net.DialTCP("tcp", nil, tcpAddr)
 	if err != nil {
 		// if connection was refused, conn does not exist and gives a nil pointer error
 		// fmt.Println(conn.RemoteAddr().String(), os.Stderr, "Fatal error:", err)
 		fmt.Println("Fatal error:", err)
 		os.Exit(1)
 	}
-
-	// Test connection
-	if !TestConn(conn) {
-		fmt.Println("Connection failed!")
-		os.Exit(1)
+	// Send hostaddr to proxy
+	if proxyNeedYes {
+		_, err = conn.Write([]byte(server + "\n"))
+		if err != nil {
+			fmt.Println("Error sending hostaddr to proxy:", err)
+		}
 	}
-
+	fmt.Println("connection success")
 	for {
 		// Todo: Add a UNIX style command line interface
 		//repeat send request until user input "exit"
@@ -90,7 +99,7 @@ func main() {
 
 		if proxyNeedYes {
 			fmt.Println("proxy test:")
-			proxy(conn, method, root, fileName, HttpProxy)
+			proxy(conn, method, root, fileName, server)
 			fmt.Println("proxt test end")
 			//}
 		} else {
@@ -102,18 +111,15 @@ func main() {
 	}
 }
 
-func proxy(conn *net.TCPConn, method string, root string, fileName string, HttpProxyAddr string) {
+func proxy(conn *net.TCPConn, method string, root string, fileName string, hostAddr string) {
 
-	fmt.Println("http proxtaddr:", HttpProxyAddr)
-	proxy := func(_ *http.Request) (*url.URL, error) {
-		return url.Parse(HttpProxyAddr)
-	}
-	//urlparse,_ := url.Parse(HttpProxyAddr)
-	//fmt.Println("url.Parse(HttpProxyAddr):", urlparse)
-	httpTransport := &http.Transport{Proxy: proxy}
+	// proxy := func(_ *http.Request) (*url.URL, error) {
+	// 	return url.Parse(HttpProxyAddr)
+	// }
+	// httpTransport := &http.Transport{Proxy: proxy}
 
-	httpClient := &http.Client{Transport: httpTransport}
-	host_addr := conn.RemoteAddr().String()
+	// httpClient := &http.Client{}
+	host_addr := hostAddr
 
 	url := "http://" + host_addr + root + "/" + fileName
 
@@ -122,7 +128,13 @@ func proxy(conn *net.TCPConn, method string, root string, fileName string, HttpP
 		fmt.Println("proxy request Error:", err)
 	}
 
-	resp, err := httpClient.Do(req)
+	// resp, err := httpClient.Do(req)
+	err = req.Write(conn)
+	if err != nil {
+		fmt.Println("proxy request Error:", err)
+	}
+	// Read response from server
+	resp, err := http.ReadResponse(bufio.NewReader(conn), req)
 	if err != nil {
 		fmt.Println("proxy response Error:", err)
 	}
@@ -204,6 +216,7 @@ func sender(conn *net.TCPConn, method string, root string, fileName string) {
 		// add request header content type
 
 		request.Header.Add("Content-Type", contentType)
+		request.Close = true
 		fmt.Println("contentType:", request.Header.Get("Content-Type"))
 		// Content-Length is set automatically by http.NewRequest
 		fmt.Println("POST upload bytes length:", request.ContentLength)
@@ -220,12 +233,11 @@ func sender(conn *net.TCPConn, method string, root string, fileName string) {
 	// fmt.Println("current request:", request)
 	// Read response from connection
 	reader := bufio.NewReader(conn)
-	// Print response
 	response, err := http.ReadResponse(reader, request)
 	if err != nil {
 		fmt.Println("Error reading response:", err)
 	}
-
+	defer response.Body.Close()
 	switch response.StatusCode {
 	// go automatically breaks after first match
 	case http.StatusInternalServerError:
@@ -259,5 +271,4 @@ func sender(conn *net.TCPConn, method string, root string, fileName string) {
 	default:
 		fmt.Println("Invalid request method!")
 	}
-	response.Body.Close()
 }

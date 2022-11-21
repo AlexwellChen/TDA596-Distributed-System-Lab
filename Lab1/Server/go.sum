@@ -1,2 +1,6 @@
+github.com/zh-five/golimit v0.0.0-20200506070750-1320ef5af62a h1:7j8Ie9yeHnX76+4HoAgrXaHHXFruSa+j7K+gsXkoS5M=
+github.com/zh-five/golimit v0.0.0-20200506070750-1320ef5af62a/go.mod h1:9YT2k5t5ym8Ya4dqObyPvpRIxsyNGlpoB9Mgqn+WuNQ=
+golang.org/x/net v0.2.0 h1:sZfSu1wtKLGlWI4ZZayP0ck9Y73K1ynO6gqzTdBVdPU=
+golang.org/x/net v0.2.0/go.mod h1:KqCZLdyyvdV855qA2rE3GC2aiw5xGR5TEjj8smXukLY=
 golang.org/x/sync v0.1.0 h1:wsuoTGHzEhffawBOhz5CYhcrV4IdKZbEyZjBMuTp12o=
 golang.org/x/sync v0.1.0/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=

@@ -5,18 +5,18 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"time"
 
-	"golang.org/x/sync/semaphore"
+	"github.com/zh-five/golimit"
 )
 
-const (
-	Limit  = 1 // Upper limit of concurrent connections
-	Weight = 1 // Weight of each connection
-)
+// const (
+// 	Limit_num = 1 // Upper limit of concurrent connections
+// 	Weight    = 1 // Weight of each connection
+// )
 
-// global variable semaphore
-var sem = semaphore.NewWeighted(Limit)
+// // // global variable semaphore
+// var sem = semaphore.NewWeighted(Limit_num)
+var current_conn int
 
 func main() {
 	// Get address and port number from command line
@@ -33,68 +33,49 @@ func main() {
 }
 
 func ListenAndServe(address string, root string) error {
-	// max_delay := 2 // seconds
 	listener, err := net.Listen("tcp", address)
 	if err != nil {
 		fmt.Println("Listen is err!: ", err)
 	}
 	defer listener.Close()
-	// defer listener.Close()
 	fmt.Println("Listening on " + address)
 
+	g := golimit.NewGoLimit(2) // 10 concurrent connections
+	current_conn = 0
+	// Bug: Proxy could not been limit by semaphore
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
 			fmt.Println("Accept err!: ", err)
 			continue
 		}
-		valid := sem.TryAcquire(Weight)
-		if !valid {
-			fmt.Println("Semaphore full! Connection is rejected!")
-			testLimit := 3
-			testGap := 2 // seconds
-			time.Sleep(time.Duration(testGap) * time.Second)
-			for i := 0; i < testLimit; i++ {
-				fmt.Println(i+1, "time try to acquire semaphore...")
-				time.Sleep(time.Duration(testGap) * time.Second)
-				valid = sem.TryAcquire(Weight)
-				SendTCPConnWAIT(conn)
-				if valid {
-					fmt.Println("Semaphore acquired!")
-					SendTCPConnACK(conn)
-					fmt.Println("Connection from ", conn.RemoteAddr().String())
-					go HandleConnection(conn, root)
-					break
-				}
-			}
-			if !valid {
-				conn.Close()
-				continue
-			}
-		} else {
-			fmt.Println("Semaphore acquired!")
-			SendTCPConnACK(conn)
-			fmt.Println("Connection from ", conn.RemoteAddr().String())
-			go HandleConnection(conn, root)
-		}
+		g.Add()
+		current_conn++
+		fmt.Println("Current connection number: ", current_conn)
+		fmt.Println("Connection from ", conn.RemoteAddr().String())
+		go HandleConnection(g, conn, root)
 	}
 }
 
-func HandleConnection(conn net.Conn, root string) {
+func HandleConnection(g *golimit.GoLimit, conn net.Conn, root string) {
 	// read from connection
-	defer sem.Release(Weight)
+	// defer sem.Release(Weight)
+
 	for {
 		// read request
 		br := bufio.NewReaderSize(conn, 50*1024*1024) // 50MB buffer
 		request, err_readReq := http.ReadRequest(br)
-		defer conn.Close()
-
 		if err_readReq != nil {
+			current_conn--
+			g.Done()
+			defer conn.Close()
 			if err_readReq.Error() == "EOF" {
 				fmt.Println("Connection closed by client")
+				fmt.Println("Current connection number: ", current_conn)
 				fmt.Println("--------------------------------------------------")
 				return
 			} else {
+				fmt.Println("Current connection number: ", current_conn)
 				fmt.Println("Request err:", err_readReq)
 				// Return 400 Bad Request
 				conn.Write([]byte("HTTP/1.1 400 Bad Request\r"))

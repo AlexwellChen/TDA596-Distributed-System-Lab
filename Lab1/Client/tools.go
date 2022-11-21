@@ -80,7 +80,7 @@ func SetProxyAddr() string {
 	// fmt.Println(len(args_str))
 
 	if len(args_str) == 0 {
-		fmt.Println("No input arguments! Using default proxy address: localhost:8080")
+		fmt.Println("No input arguments! Using default proxy address: localhost:8081")
 		return "-1"
 	}
 
