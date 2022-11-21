@@ -28,7 +28,7 @@ func main() {
 		HttpProxy = SetProxyAddr()
 		if HttpProxy == "-1" {
 			fmt.Println("Using default proxy address: localhost:8081")
-			HttpProxy = "http://localhost:8081"
+			HttpProxy = "localhost:8081"
 		}
 		fmt.Println("Proxy address: " + HttpProxy + " is connecting")
 	} else {

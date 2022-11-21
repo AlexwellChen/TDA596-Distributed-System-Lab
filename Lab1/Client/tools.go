@@ -100,8 +100,8 @@ func SetProxyAddr() string {
 			return "-1"
 		}
 
-		//fmt.Println("url is http://localhost:" + addr_list[0][0:len(addr_list[0])-2])
-		return "http://localhost:" + addr_list[0]
+		//fmt.Println("url is localhost:" + addr_list[0][0:len(addr_list[0])-2])
+		return "localhost:" + addr_list[0]
 	} else if len(addr_list) == 2 {
 
 		// Check if the address is valid
@@ -129,10 +129,10 @@ func SetProxyAddr() string {
 			fmt.Println("Port number range error!")
 			return "-1"
 		}
-		return "http://" + addr_list[0] + ":" + addr_list[1]
+		return addr_list[0] + ":" + addr_list[1]
 	} else {
 		fmt.Println("Proxy Address format error! Using default address: localhost:8081")
-		return "http://localhost:8081"
+		return "localhost:8081"
 	}
 }
 
