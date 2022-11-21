@@ -24,6 +24,9 @@ func main() {
 	if addr == "-1" {
 		fmt.Println("Address format error! Using default address: localhost:8080")
 		addr = "localhost:8080"
+	} else if addr == "-2" {
+		fmt.Println("Using docker for server! Listening on all interfaces of port 8080")
+		addr = "0.0.0.0:8080"
 	}
 	root := "./root"
 	ListenAndServe(addr, root)

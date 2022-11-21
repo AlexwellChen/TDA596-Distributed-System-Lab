@@ -88,6 +88,9 @@ func GetAddr() string {
 	addr_list := strings.Split(args[1], ":")
 
 	if len(addr_list) == 1 {
+		if strings.TrimSpace(addr_list[0]) == "docker" {
+			return "-2"
+		}
 		// Check if the port number is valid
 		port, err := strconv.Atoi(strings.TrimSpace(addr_list[0]))
 		if err != nil {

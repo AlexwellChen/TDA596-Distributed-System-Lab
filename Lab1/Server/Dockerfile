@@ -27,4 +27,4 @@ EXPOSE 8080
 
 # Run
 # CMD [ "./http-server" ]
-ENTRYPOINT [ "./http-server", "8080" ]
+ENTRYPOINT [ "./http-server", "docker"]
