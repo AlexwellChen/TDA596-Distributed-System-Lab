@@ -9,13 +9,6 @@ import (
 	"github.com/zh-five/golimit"
 )
 
-// const (
-// 	Limit_num = 1 // Upper limit of concurrent connections
-// 	Weight    = 1 // Weight of each connection
-// )
-
-// // // global variable semaphore
-// var sem = semaphore.NewWeighted(Limit_num)
 var current_conn int
 
 func main() {
@@ -40,9 +33,8 @@ func ListenAndServe(address string, root string) error {
 	defer listener.Close()
 	fmt.Println("Listening on " + address)
 
-	g := golimit.NewGoLimit(2) // 10 concurrent connections
+	g := golimit.NewGoLimit(10) // 10 concurrent connections
 	current_conn = 0
-	// Bug: Proxy could not been limit by semaphore
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
@@ -59,7 +51,6 @@ func ListenAndServe(address string, root string) error {
 
 func HandleConnection(g *golimit.GoLimit, conn net.Conn, root string) {
 	// read from connection
-	// defer sem.Release(Weight)
 
 	for {
 		// read request
@@ -85,7 +76,6 @@ func HandleConnection(g *golimit.GoLimit, conn net.Conn, root string) {
 
 		// Set up response
 		request.Response = new(http.Response)
-
 		fmt.Println("Request Method:\n", request.Method) // "GET", "POST"
 		fmt.Println("Request content:\n", request.URL)
 

@@ -77,9 +77,8 @@ func main() {
 	}
 	fmt.Println("connection success")
 	for {
-		// Todo: Add a UNIX style command line interface
-		//repeat send request until user input "exit"
-		//Ask user for input request resource and method?
+		// repeat send request until user input "exit"
+		// Ask user for input request resource and method?
 		fmt.Println("Please enter request method, or enter exit to exit connection:") //GET POST
 		method, _ := reader.ReadString('\n')
 		//case insensitive
@@ -110,20 +109,18 @@ func main() {
 
 func proxy(conn *net.TCPConn, method string, root string, fileName string, hostAddr string) {
 	// send request to proxy
-	host_addr := hostAddr
-
-	url := "http://" + host_addr + root + "/" + fileName
-
+	url := "http://" + hostAddr + root + "/" + fileName
 	req, err := http.NewRequest(method, url, nil)
 	if err != nil {
 		fmt.Println("proxy request Error:", err)
 	}
 
-	// resp, err := httpClient.Do(req)
+	// send request to proxy
 	err = req.Write(conn)
 	if err != nil {
 		fmt.Println("proxy request Error:", err)
 	}
+
 	// Read response from server
 	resp, err := http.ReadResponse(bufio.NewReader(conn), req)
 	if err != nil {
@@ -145,14 +142,11 @@ func proxy(conn *net.TCPConn, method string, root string, fileName string, hostA
 		fmt.Println("Proxy only resonse to GET method\n The StatusCode is:", resp.StatusCode)
 		fmt.Println("501 Not Implemented")
 	}
-
 	fmt.Println("Proxy success")
-
 }
 
 func sender(conn *net.TCPConn, method string, root string, fileName string) {
 	host_addr := conn.RemoteAddr().String()
-
 	url := "http://" + host_addr + root + "/" + fileName
 
 	// Create a new request
@@ -164,7 +158,6 @@ func sender(conn *net.TCPConn, method string, root string, fileName string) {
 		fmt.Println("GET url:", url)
 	} else if method == "POST" {
 		//TODO: post error: use post then get -> error  and  post many times -> error
-		//TODO: post jpg file, can create file but isn't show content
 
 		pwd, _ := os.Getwd()
 		path := pwd + root + "/" + fileName
@@ -188,11 +181,9 @@ func sender(conn *net.TCPConn, method string, root string, fileName string) {
 		if err != nil {
 			fmt.Println("Read file error!")
 		}
-		//fmt.Println("Bytes:", bytes)
+
 		// read bytes into io.Reader
 		reader := strings.NewReader(string(bytes))
-		// fmt.Println("reader/request.body", reader)
-
 		fileEnding, _ := CheckFileEnding(url)
 		// if it is a css file change the content type(because default is text/plain)
 		if fileEnding == "css" {
@@ -204,8 +195,8 @@ func sender(conn *net.TCPConn, method string, root string, fileName string) {
 			fmt.Println("New request error:", err)
 		}
 		defer request.Body.Close()
-		// add request header content type
 
+		// add request header content type
 		request.Header.Add("Content-Type", contentType)
 		request.Close = true
 		fmt.Println("contentType:", request.Header.Get("Content-Type"))
@@ -217,7 +208,7 @@ func sender(conn *net.TCPConn, method string, root string, fileName string) {
 			fmt.Println("Please enter request method!")
 			return
 		} else {
-			request, _ = http.NewRequest(method, url, nil) //unspoorted method also need to send request
+			request, _ = http.NewRequest(method, url, nil) // Invalid method also need to send request
 			// Default is GET
 			fmt.Println("Invalid request method: ", request.Method)
 		}
@@ -227,7 +218,7 @@ func sender(conn *net.TCPConn, method string, root string, fileName string) {
 		fmt.Println(conn.RemoteAddr().String(), " Error: ", err)
 		os.Exit(1)
 	}
-	// fmt.Println("current request:", request)
+
 	// Read response from connection
 	reader := bufio.NewReader(conn)
 	response, err := http.ReadResponse(reader, request)
@@ -255,7 +246,6 @@ func sender(conn *net.TCPConn, method string, root string, fileName string) {
 				// Print response body with println
 				bodyString, _ := io.ReadAll(response.Body)
 				fmt.Println(string(bodyString))
-				// _, _ = io.Copy(os.Stdout, response.Body)
 			} else {
 				fmt.Println("Response Header content type:", response.Header.Get("Content-Type"))
 				DownloadFile(response, fileName)
