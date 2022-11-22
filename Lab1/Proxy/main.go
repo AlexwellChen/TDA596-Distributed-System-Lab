@@ -80,16 +80,6 @@ func handleClientRequest(client net.Conn, server net.Conn) {
 			client_request.Response.Write(client)
 			return
 		}
-		
-		//Construct server connection
-		// server, err := net.Dial("tcp", client_request.Host)
-		// if err != nil {
-		// 	// Return internal server error
-		// 	client_request.Response.StatusCode = http.StatusInternalServerError
-		// 	client_request.Response.Write(client)
-		// 	fmt.Println("Error dialing server:", err.Error())
-		// 	return
-		// }
 
 		// Construct proxy to server request
 		src_url := client_request.URL

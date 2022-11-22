@@ -139,7 +139,7 @@ func proxy(conn *net.TCPConn, method string, root string, fileName string, hostA
 			DownloadFile(resp, fileName)
 		}
 	} else {
-		fmt.Println("Proxy only resonse to GET method\n The StatusCode is:", resp.StatusCode)
+		fmt.Println("Proxy only resonse to GET method\nThe StatusCode is:", resp.StatusCode)
 		fmt.Println("501 Not Implemented")
 	}
 	fmt.Println("Proxy success")
