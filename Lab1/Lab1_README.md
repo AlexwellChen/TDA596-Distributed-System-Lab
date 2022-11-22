@@ -20,5 +20,7 @@ Build client with `go build -o http-client` and run with `./http-client`
 Run proxy with `go run main.go <port number>`  
 Build proxy with `go build -o http-proxy` and run with `./http-proxy <port number>`  
 
-
+**Cloud Running** 
+Server avaliable at 95.80.36.91:8080  
+Deploy address should be 0.0.0.0:8080
 
