@@ -65,7 +65,6 @@ func main() {
 	conn, err := net.DialTCP("tcp", nil, tcpAddr)
 	if err != nil {
 		// if connection was refused, conn does not exist and gives a nil pointer error
-		// fmt.Println(conn.RemoteAddr().String(), os.Stderr, "Fatal error:", err)
 		fmt.Println("Fatal error:", err)
 		os.Exit(1)
 	}
@@ -105,20 +104,12 @@ func main() {
 		} else {
 			sender(conn, method, root, fileName)
 		}
-
-		//sender(conn, method, root, fileName)
 		fmt.Println("--------------------------------------------------")
 	}
 }
 
 func proxy(conn *net.TCPConn, method string, root string, fileName string, hostAddr string) {
-
-	// proxy := func(_ *http.Request) (*url.URL, error) {
-	// 	return url.Parse(HttpProxyAddr)
-	// }
-	// httpTransport := &http.Transport{Proxy: proxy}
-
-	// httpClient := &http.Client{}
+	// send request to proxy
 	host_addr := hostAddr
 
 	url := "http://" + host_addr + root + "/" + fileName
@@ -222,8 +213,14 @@ func sender(conn *net.TCPConn, method string, root string, fileName string) {
 		fmt.Println("POST upload bytes length:", request.ContentLength)
 
 	} else {
-		request, _ = http.NewRequest(method, url, nil) //unspoorted method also need to send request
-		fmt.Println("Invalid request method!")
+		if method == "" {
+			fmt.Println("Please enter request method!")
+			return
+		} else {
+			request, _ = http.NewRequest(method, url, nil) //unspoorted method also need to send request
+			// Default is GET
+			fmt.Println("Invalid request method: ", request.Method)
+		}
 	}
 	err := request.Write(conn)
 	if err != nil {
