@@ -104,12 +104,6 @@ func GetAddr() string {
 		return "localhost:" + addr_list[0]
 	} else if len(addr_list) == 2 {
 
-		// Check if the address is valid
-		if len(addr_list) != 2 {
-			fmt.Println("Address format error!")
-			return "-1"
-		}
-
 		// Check if the ip address is valid
 		if addr_list[0] != "localhost" {
 			ip := net.ParseIP(addr_list[0])
@@ -133,21 +127,5 @@ func GetAddr() string {
 	} else {
 		fmt.Println("Address format error! Using default address: localhost:8080")
 		return "localhost:8080"
-	}
-}
-
-func SendTCPConnACK(conn net.Conn) {
-	// Send ACK to client
-	_, err := conn.Write([]byte("ACK\n"))
-	if err != nil {
-		fmt.Println("Error sending ACK to client:", err)
-	}
-}
-
-func SendTCPConnWAIT(conn net.Conn) {
-	// Send WAIT to client
-	_, err := conn.Write([]byte("WAIT\n"))
-	if err != nil {
-		fmt.Println("Error sending WAIT to client:", err)
 	}
 }
