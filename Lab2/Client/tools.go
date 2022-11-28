@@ -9,45 +9,95 @@ import (
 	"time"
 )
 
-var successorsSize = 5
+/*------------------------------------------------------------*/
+/*                    Node Defination Below                   */
+/*------------------------------------------------------------*/
+
+var successorsSize = 3
+
+var fingerTableSize = 160 // Todo: 真的需要这么大的finger table吗？
 
 type Key string
 
 type NodeAddress string
 
 type Node struct {
+	// For Chord search
 	Address     NodeAddress
 	FingerTable []NodeAddress
+
+	// For Chord stabilization
 	Predecessor NodeAddress
-	Successors  []NodeAddress
-	PrivateKey  *rsa.PrivateKey
-	PublicKey   *rsa.PublicKey
+	Successors  []NodeAddress // Multiple successors to handle first succesor node failures
 
-	Bucket map[Key]string
-}
+	// For Chord data encryption
+	PrivateKey *rsa.PrivateKey
+	PublicKey  *rsa.PublicKey
 
-type Arguments struct {
-	// Read command line arguments
-	Address     NodeAddress // Current node address
-	Port        int         // Current node port
-	JoinAddress NodeAddress // Joining node address
-	JoinPort    int         // Joining node port
-	Stabilize   time.Duration
-	FixFingers  time.Duration
-	CheckPred   time.Duration
-	Successors  int
-	ClientID    string
+	Bucket map[Key]string // Hash Key -> File value store
 }
 
 func (node *Node) GenerateRSAKey(bits int) {
-	//GenerateKey函数使用随机数据生成器random生成一对具有指定字位数的RSA密钥
-	//Reader是一个全局、共享的密码用强随机数生成器
+	// GenerateKey函数使用随机数据生成器random生成一对具有指定字位数的RSA密钥
+	// Reader是一个全局、共享的密码用强随机数生成器
 	privateKey, err := rsa.GenerateKey(rand.Reader, bits)
 	if err != nil {
 		panic(err)
 	}
 	node.PrivateKey = privateKey
 	node.PublicKey = &privateKey.PublicKey
+}
+
+func (node *Node) Init(args Arguments) {
+	// Initialize node
+	node.Address = args.Address
+	node.FingerTable = make([]NodeAddress, fingerTableSize)
+	node.Predecessor = ""
+	node.Successors = make([]NodeAddress, successorsSize)
+	node.Bucket = make(map[Key]string)
+	node.GenerateRSAKey(2048)
+}
+
+func (node *Node) InitFingerTable() {
+	// Initialize finger table
+	for i := 0; i < fingerTableSize; i++ {
+		node.FingerTable[i] = node.Address
+	}
+}
+
+func (node *Node) InitSuccessors() {
+	// Initialize successors
+	for i := 0; i < successorsSize; i++ {
+		node.Successors[i] = node.Address
+	}
+}
+
+func (node *Node) Stabilize() {
+	// Todo: Stabilize the Chord ring
+
+}
+
+/*------------------------------------------------------------*/
+/*                     Tool Functions Below                   */
+/*------------------------------------------------------------*/
+
+type Arguments struct {
+	// Read command line arguments
+	Address     NodeAddress   // Current node address
+	Port        int           // Current node port
+	JoinAddress NodeAddress   // Joining node address
+	JoinPort    int           // Joining node port
+	Stabilize   time.Duration // The time in milliseconds between invocations of stabilize.
+	FixFingers  time.Duration // The time in milliseconds between invocations of fix_fingers.
+	CheckPred   time.Duration // The time in milliseconds between invocations of check_predecessor.
+	Successors  int
+	ClientID    string
+}
+
+func Hash(elt string) *big.Int {
+	hasher := sha1.New()
+	hasher.Write([]byte(elt))
+	return new(big.Int).SetBytes(hasher.Sum(nil))
 }
 
 func GetCmdArgs() Arguments {
@@ -89,18 +139,7 @@ func GetCmdArgs() Arguments {
 	}
 }
 
-func (node *Node) Init(args Arguments) {
-	// Initialize node
-	node.Address = args.Address
-	node.FingerTable = make([]NodeAddress, 160)
-	node.Predecessor = ""
-	node.Successors = make([]NodeAddress, successorsSize)
-	node.Bucket = make(map[Key]string)
-	node.GenerateRSAKey(2048)
-}
+func CheckArgsValid(args Arguments) {
+	// Todo: Check if the command line arguments are valid
 
-func hash(elt string) *big.Int {
-	hasher := sha1.New()
-	hasher.Write([]byte(elt))
-	return new(big.Int).SetBytes(hasher.Sum(nil))
 }
