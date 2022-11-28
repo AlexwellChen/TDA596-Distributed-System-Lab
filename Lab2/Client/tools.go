@@ -28,10 +28,10 @@ type NodeAddress string
 type Node struct {
 	// Node attributes
 	Name       string   // Name: IP:Port or User specified Name. Exp: [N]14
-	Identifier *big.Int // Hash(Name) -> Chord space Identifier
+	Identifier *big.Int // Hash(Address) -> Chord space Identifier
 
 	// For Chord search
-	Address     NodeAddress // Address: IP:Port
+	Address     NodeAddress // Address should be "IP:Port"
 	FingerTable []NodeAddress
 
 	// For Chord stabilization
@@ -106,6 +106,20 @@ func (node *Node) LeaveChord() {
 	// For failure handling, backup the data in the bucket to the successor (Bonus)
 }
 
+/*------------------------------------------------------------*/
+/*                  Network Functions By: Alexwell            */
+/*------------------------------------------------------------*/
+
+func ChordCall(target NodeAddress, method string, request interface{}, reply interface{}) error {
+	client, err := rpc.DialHTTP("tcp", string(target))
+	if err != nil {
+		return err
+	}
+	defer client.Close()
+	err = client.Call("Node."+method, request, &reply)
+	return err
+}
+
 /*------------------------------------------------------------
                 Stabilizing Functions Below	By:wang
 --------------------------------------------------------------*/
@@ -150,8 +164,19 @@ func (node *Node) FixFingers() {
 }
 
 /*------------------------------------------------------------*/
-/*                  Routing Functions Below By:Alexwell       */
+/*                  Routing Functions By: Alexwell            */
 /*------------------------------------------------------------*/
+
+type FindSuccessorRPCReply struct {
+	found            bool
+	SuccessorAddress NodeAddress
+}
+
+// RPC method Packaging for FindSuccessor
+func (node *Node) FindSuccessorRPC(requestID Key, reply *FindSuccessorRPCReply) error {
+	reply.found, reply.SuccessorAddress = node.FindSuccessor(requestID)
+	return nil
+}
 
 func (node *Node) FindSuccessor(id Key) (bool, NodeAddress) {
 	// Todo: Find the successor of the given id
@@ -170,6 +195,31 @@ func (node *Node) ClosePrecedingNode(id Key) NodeAddress {
 		}
 	}
 	return node.Successors[0]
+}
+
+func Find(id Key, startNode NodeAddress) NodeAddress {
+	found := false
+	nextNode := startNode
+	i := 0
+	maxSteps := 10
+	for !found && i < maxSteps {
+		// Todo: Send request to nextNode, execute FindSuccessor(id), and return the result
+		// found, nextNode = nextNode.FindSuccessor(id)
+		result := FindSuccessorRPCReply{}
+		err := ChordCall(nextNode, "FindSuccessorRPC", id, &result)
+		if err != nil {
+			fmt.Println(err)
+			break
+		}
+		found = result.found
+		nextNode = result.SuccessorAddress
+		i++
+	}
+	if found {
+		return nextNode
+	} else {
+		return "-1"
+	}
 }
 
 func StrHash(elt string) *big.Int {
