@@ -27,8 +27,8 @@ type NodeAddress string
 
 type Node struct {
 	// Node attributes
-	Name       string // Name: IP:Port or User specified Name. Exp: [N]14
-	Identifier Key    // Hash(Name) -> Chord space Identifier
+	Name       string   // Name: IP:Port or User specified Name. Exp: [N]14
+	Identifier *big.Int // Hash(Name) -> Chord space Identifier
 
 	// For Chord search
 	Address     NodeAddress // Address: IP:Port
@@ -68,6 +68,8 @@ func NewNode(args Arguments) *Node {
 	// Initialize node
 	node := &Node{}
 	node.Address = args.Address
+	node.Name = args.ClientName
+	node.Identifier = StrHash(string(node.Address))
 	node.FingerTable = make([]NodeAddress, fingerTableSize)
 	node.Predecessor = ""
 	node.Successors = make([]NodeAddress, args.Successors)
@@ -151,13 +153,23 @@ func (node *Node) FixFingers() {
 /*                  Routing Functions Below By:Alexwell       */
 /*------------------------------------------------------------*/
 
-func (node *Node) FindSuccessor(id Key) NodeAddress {
-	// Todo: Find the successor of the given id iterativly
-	return node.Address // Fake return
+func (node *Node) FindSuccessor(id Key) (bool, NodeAddress) {
+	// Todo: Find the successor of the given id
+	if between(node.Identifier, StrHash(string(id)), StrHash(string(node.Successors[0])), true) {
+		return true, node.Successors[0]
+	} else {
+		return false, node.ClosePrecedingNode(id)
+	}
 }
 
-func (node *Node) ClosePrecedingNode() {
-
+func (node *Node) ClosePrecedingNode(id Key) NodeAddress {
+	fingerTableSize := len(node.FingerTable)
+	for i := fingerTableSize - 1; i >= 1; i-- {
+		if between(node.Identifier, StrHash(string(node.FingerTable[i])), StrHash(string(id)), true) {
+			return node.FingerTable[i]
+		}
+	}
+	return node.Successors[0]
 }
 
 func StrHash(elt string) *big.Int {
@@ -188,7 +200,7 @@ type Arguments struct {
 	FixFingers  time.Duration // The time in milliseconds between invocations of fix_fingers.
 	CheckPred   time.Duration // The time in milliseconds between invocations of check_predecessor.
 	Successors  int
-	ClientID    string
+	ClientName  string
 }
 
 func GetCmdArgs() Arguments {
@@ -201,7 +213,7 @@ func GetCmdArgs() Arguments {
 	var ttf time.Duration // The time in milliseconds between invocations of fix_fingers.
 	var tcp time.Duration // The time in milliseconds between invocations of check_predecessor.
 	var r int             // The number of successors to maintain.
-	var i string          // Client ID
+	var i string          // Client name
 
 	// Parse command line arguments
 	flag.StringVar(&a, "a", "localhost", "Current node address")
@@ -212,7 +224,7 @@ func GetCmdArgs() Arguments {
 	flag.DurationVar(&ttf, "ttf", 1000, "The time in milliseconds between invocations of fix_fingers.")
 	flag.DurationVar(&tcp, "tcp", 1000, "The time in milliseconds between invocations of check_predecessor.")
 	flag.IntVar(&r, "r", 3, "The number of successors to maintain.")
-	flag.StringVar(&i, "i", "Unspecified", "Client ID")
+	flag.StringVar(&i, "i", "Unspecified", "Client name")
 	flag.Parse()
 
 	// Return command line arguments
@@ -225,7 +237,7 @@ func GetCmdArgs() Arguments {
 		FixFingers:  ttf,
 		CheckPred:   tcp,
 		Successors:  r,
-		ClientID:    i,
+		ClientName:  i,
 	}
 }
 
