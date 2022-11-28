@@ -25,10 +25,11 @@ type NodeAddress string
 
 type Node struct {
 	// Node attributes
-	Name string // Name: IP:Port or User specified Name. Exp: [N]14
+	Name       string // Name: IP:Port or User specified Name. Exp: [N]14
+	Identifier Key    // Hash(Name) -> Chord space Identifier
 
 	// For Chord search
-	Address     NodeAddress // Hash(Name) -> Chord space address
+	Address     NodeAddress // Address: IP:Port
 	FingerTable []NodeAddress
 
 	// For Chord stabilization
