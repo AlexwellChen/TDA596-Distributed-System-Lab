@@ -76,14 +76,16 @@ func RSA_Decrypt(cipherText []byte, path string) []byte {
 }
 
 // Use example:
-// func main(){
-// 	//生成密钥对，保存到文件
-// 	GenerateRSAKey(2048)
-// 	message:=[]byte("hello world")
-// 	//加密
-// 	cipherText:=RSA_Encrypt(message,"public.pem")
-// 	fmt.Println("加密后为：",string(cipherText))
-// 	//解密
-// 	plainText := RSA_Decrypt(cipherText, "private.pem")
-// 	fmt.Println("解密后为：",string(plainText))
-// }
+/*
+func main(){
+	//生成密钥对，保存到文件
+	GenerateRSAKey(2048)
+	message:=[]byte("hello world")
+	//加密
+	cipherText:=RSA_Encrypt(message,"public.pem")
+	fmt.Println("加密后为：",string(cipherText))
+	//解密
+	plainText := RSA_Decrypt(cipherText, "private.pem")
+	fmt.Println("解密后为：",string(plainText))
+}
+*/
