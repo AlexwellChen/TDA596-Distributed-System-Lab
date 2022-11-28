@@ -82,6 +82,7 @@ func (node *Node) InitFingerTable() {
 
 func (node *Node) InitSuccessors() {
 	// Initialize successors
+	successorsSize := len(node.Successors)
 	for i := 0; i < successorsSize; i++ {
 		node.Successors[i] = node.Address
 	}
