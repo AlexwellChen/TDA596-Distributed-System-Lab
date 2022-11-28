@@ -5,7 +5,9 @@ import (
 	"crypto/rsa"
 	"crypto/sha1"
 	"flag"
+	"fmt"
 	"math/big"
+	"net/rpc"
 	"time"
 )
 
@@ -102,7 +104,7 @@ func (node *Node) LeaveChord() {
 }
 
 /*------------------------------------------------------------
-                Stabilizing Functions Below
+                Stabilizing Functions Below	By:wang
 --------------------------------------------------------------*/
 
 func (node *Node) Stabilize() {
@@ -111,12 +113,33 @@ func (node *Node) Stabilize() {
 
 }
 
-func (node *Node) CheckPredecessor() {
-
+// check whether predecessor has failed
+func (node *Node) CheckPredecessor() error {
+	pred := node.Predecessor
+	if pred != "" {
+		//check connection
+		client, err := rpc.DialHTTP("tcp", string(pred))
+		//if connection failed, set predecessor to nil
+		if err != nil {
+			fmt.Printf("Predecessor %v has failed", pred)
+			node.Predecessor = ""
+		} else {
+			client.Close()
+		}
+	}
+	return nil
 }
 
-func (node *Node) Notify() {
-
+// Notify tells the node at 'address' that it might be our predecessor
+func (node *Node) Notify(address string) error {
+	//if (predecessor is nil or n' ∈ (predecessor, n))
+	if node.Predecessor == "" ||
+		between(StrHash(string(node.Predecessor)),
+			StrHash(address), StrHash(string(node.Address)), false) {
+		//predecessor = n'
+		node.Predecessor = NodeAddress(address)
+	}
+	return nil
 }
 
 func (node *Node) FixFingers() {
