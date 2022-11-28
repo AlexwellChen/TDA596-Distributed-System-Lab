@@ -13,7 +13,7 @@ import (
 /*                    Node Defination Below                   */
 /*------------------------------------------------------------*/
 
-var successorsSize = 3
+// Main function + Node defination :Qi
 
 var fingerTableSize = 161 // Use 1-160 Todo: 真的需要160的finger table吗？
 
@@ -21,9 +21,14 @@ type Key string
 
 type NodeAddress string
 
+// FileAddress: [K]13 store in [N]14
+
 type Node struct {
+	// Node attributes
+	Name string // Name: IP:Port or User specified Name. Exp: [N]14
+
 	// For Chord search
-	Address     NodeAddress
+	Address     NodeAddress // Hash(Name) -> Chord space address
 	FingerTable []NodeAddress
 
 	// For Chord stabilization
@@ -34,7 +39,15 @@ type Node struct {
 	PrivateKey *rsa.PrivateKey
 	PublicKey  *rsa.PublicKey
 
-	Bucket map[Key]string // Hash Key -> File value store
+	Bucket map[Key]string // Hash Key -> File name value store
+	// Exp:
+	//      ------------Store File-------------
+	//      Hash(Hello.txt) -> 123
+	// 		Bucket[123] = Hello.txt
+
+	//      -------------Read File-------------
+	//      FilePath = Bucket[123]
+	// 		ReadFile(FilePath) -> Hello World
 }
 
 func (node *Node) GenerateRSAKey(bits int) {
@@ -48,14 +61,16 @@ func (node *Node) GenerateRSAKey(bits int) {
 	node.PublicKey = &privateKey.PublicKey
 }
 
-func (node *Node) Init(args Arguments) {
+func NewNode(args Arguments) *Node {
 	// Initialize node
+	node := &Node{}
 	node.Address = args.Address
 	node.FingerTable = make([]NodeAddress, fingerTableSize)
 	node.Predecessor = ""
-	node.Successors = make([]NodeAddress, successorsSize)
+	node.Successors = make([]NodeAddress, args.Successors)
 	node.Bucket = make(map[Key]string)
 	node.GenerateRSAKey(2048)
+	return node
 }
 
 func (node *Node) InitFingerTable() {
@@ -76,23 +91,62 @@ func (node *Node) JoinChord() {
 	// Todo: Join the Chord ring
 }
 
-func (node *Node) CreateChordRing() {
+func (node *Node) CreateChord() {
 	// Todo: Create a Chord ring
 }
 
 func (node *Node) LeaveChord() {
 	// Todo: Leave the Chord ring
-	// For failure handling, backup the data in the bucket to the successor
+	// For failure handling, backup the data in the bucket to the successor (Bonus)
 }
+
+/*------------------------------------------------------------
+                Stabilizing Functions Below
+--------------------------------------------------------------*/
 
 func (node *Node) Stabilize() {
 	// Todo: Stabilize the Chord ring
+	// next stores the index of the next finger to fix.
 
 }
 
+func (node *Node) CheckPredecessor() {
+
+}
+
+func (node *Node) Notify() {
+
+}
+
+func (node *Node) FixFingers() {
+	//Todo: refreshes finger table entries
+}
+
+/*------------------------------------------------------------*/
+/*                  Routing Functions Below By:Alexwell       */
+/*------------------------------------------------------------*/
+
 func (node *Node) FindSuccessor(id Key) NodeAddress {
-	// Find the successor of the given id iterativly
+	// Todo: Find the successor of the given id iterativly
 	return node.Address // Fake return
+}
+
+func (node *Node) ClosePrecedingNode() {
+
+}
+
+func StrHash(elt string) *big.Int {
+	hasher := sha1.New()
+	hasher.Write([]byte(elt))
+	return new(big.Int).SetBytes(hasher.Sum(nil))
+}
+
+func between(start, elt, end *big.Int, inclusive bool) bool {
+	if end.Cmp(start) > 0 {
+		return (start.Cmp(elt) < 0 && elt.Cmp(end) < 0) || (inclusive && elt.Cmp(end) == 0)
+	} else {
+		return start.Cmp(elt) < 0 || elt.Cmp(end) < 0 || (inclusive && elt.Cmp(end) == 0)
+	}
 }
 
 /*------------------------------------------------------------*/
@@ -110,20 +164,6 @@ type Arguments struct {
 	CheckPred   time.Duration // The time in milliseconds between invocations of check_predecessor.
 	Successors  int
 	ClientID    string
-}
-
-func StrHash(elt string) *big.Int {
-	hasher := sha1.New()
-	hasher.Write([]byte(elt))
-	return new(big.Int).SetBytes(hasher.Sum(nil))
-}
-
-func between(start, elt, end *big.Int, inclusive bool) bool {
-	if end.Cmp(start) > 0 {
-		return (start.Cmp(elt) < 0 && elt.Cmp(end) < 0) || (inclusive && elt.Cmp(end) == 0)
-	} else {
-		return start.Cmp(elt) < 0 || elt.Cmp(end) < 0 || (inclusive && elt.Cmp(end) == 0)
-	}
 }
 
 func GetCmdArgs() Arguments {
@@ -148,7 +188,6 @@ func GetCmdArgs() Arguments {
 	flag.DurationVar(&tcp, "tcp", 1000, "The time in milliseconds between invocations of check_predecessor.")
 	flag.IntVar(&r, "r", 3, "The number of successors to maintain.")
 	flag.StringVar(&i, "i", "Unspecified", "Client ID")
-
 	flag.Parse()
 
 	// Return command line arguments
@@ -169,3 +208,7 @@ func CheckArgsValid(args Arguments) {
 	// Todo: Check if the command line arguments are valid
 
 }
+
+// func call(address string, method string, request interface{}, reply interface{}) error{
+// 	return rpc.NewClientWithCodec(jsonrpc.NewClientCodec(
+// }
