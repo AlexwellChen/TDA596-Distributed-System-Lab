@@ -15,7 +15,7 @@ import (
 
 var successorsSize = 3
 
-var fingerTableSize = 160 // Todo: 真的需要这么大的finger table吗？
+var fingerTableSize = 161 // Use 1-160 Todo: 真的需要160的finger table吗？
 
 type Key string
 
@@ -72,9 +72,27 @@ func (node *Node) InitSuccessors() {
 	}
 }
 
+func (node *Node) JoinChord() {
+	// Todo: Join the Chord ring
+}
+
+func (node *Node) CreateChordRing() {
+	// Todo: Create a Chord ring
+}
+
+func (node *Node) LeaveChord() {
+	// Todo: Leave the Chord ring
+	// For failure handling, backup the data in the bucket to the successor
+}
+
 func (node *Node) Stabilize() {
 	// Todo: Stabilize the Chord ring
 
+}
+
+func (node *Node) FindSuccessor(id Key) NodeAddress {
+	// Find the successor of the given id iterativly
+	return node.Address // Fake return
 }
 
 /*------------------------------------------------------------*/
@@ -94,10 +112,18 @@ type Arguments struct {
 	ClientID    string
 }
 
-func Hash(elt string) *big.Int {
+func StrHash(elt string) *big.Int {
 	hasher := sha1.New()
 	hasher.Write([]byte(elt))
 	return new(big.Int).SetBytes(hasher.Sum(nil))
+}
+
+func between(start, elt, end *big.Int, inclusive bool) bool {
+	if end.Cmp(start) > 0 {
+		return (start.Cmp(elt) < 0 && elt.Cmp(end) < 0) || (inclusive && elt.Cmp(end) == 0)
+	} else {
+		return start.Cmp(elt) < 0 || elt.Cmp(end) < 0 || (inclusive && elt.Cmp(end) == 0)
+	}
 }
 
 func GetCmdArgs() Arguments {
