@@ -24,7 +24,7 @@ var fingerTableSize = 161 // Use 1-160 Todo: 真的需要160的finger table吗�
 
 // 2^m
 var hashMod = new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(fingerTableSize-1)), nil)
-
+	
 type Key string // For file
 
 type NodeAddress string // For node
@@ -85,7 +85,7 @@ func NewNode(args Arguments) *Node {
 	node.Name = args.ClientName
 	node.Identifier = strHash(string(node.Address))
 	node.FingerTable = make([]fingerEntry, fingerTableSize)
-	node.next = 0 // next = 1?? todo: search paper again(by wang)
+	node.next = 0
 	node.Predecessor = ""
 	node.Successors = make([]NodeAddress, args.Successors)
 	node.Bucket = make(map[Key]string)
@@ -174,6 +174,7 @@ func ChordCall(targetNode NodeAddress, method string, request interface{}, reply
 
 --------------------------------------------------------------
 */
+// get node's predecessor
 func (node *Node) GetPredecessor(none *struct{}, predecessor *NodeAddress) error {
 	fmt.Println("-------------- Invoke GetPredecessor function --------------")
 	*predecessor = node.Predecessor
@@ -184,6 +185,7 @@ func (node *Node) GetPredecessor(none *struct{}, predecessor *NodeAddress) error
 	}
 }
 
+// get node's successorList
 func (node *Node) GetSuccessorList(none *struct{}, successorList *[]NodeAddress) error {
 	fmt.Println("-------------- Invoke GetSuccessorList function -------------")
 	*successorList = node.Successors[:]
@@ -192,6 +194,8 @@ func (node *Node) GetSuccessorList(none *struct{}, successorList *[]NodeAddress)
 
 // verifies n’s immediate
 func (node *Node) stabilize() error {
+	//Todo: search paper 看看是每个successor都要修改prodecessor还是只修改第一个successor
+	//Todo: search paper 看看是不是要fix successorList
 	fmt.Println("***************** Invoke stabilize function *****************")
 	var successors []NodeAddress
 	err := ChordCall(node.Successors[0], "Node.GetSuccessorList", struct{}{}, &successors)
@@ -202,6 +206,7 @@ func (node *Node) stabilize() error {
 	} else {
 		fmt.Println("GetSuccessorList failed")
 		if node.Successors[0] == "" {
+			fmt.Println("Node Successor[0] is empty -> use self as successor")
 			node.Successors[0] = node.Address
 		} else {
 			for i := 0; i < len(node.Successors); i++ {
@@ -213,7 +218,6 @@ func (node *Node) stabilize() error {
 			}
 		}
 	}
-
 	var predecessor NodeAddress = ""
 	err = ChordCall(node.Successors[0], "Node.GetPredecessor", struct{}{}, &predecessor)
 	if err == nil {
@@ -264,11 +268,15 @@ func (node *Node) Notify(address NodeAddress) error {
 
 // calculate (n + 2^(k-1) ) mod 2^m
 func (node *Node) fingerEntry(fingerentry int) *big.Int {
+	//Todo: check if use len(node.Address) or fingerTableSize
 	fmt.Println("************** Invoke fingerEntry function ******************")
+	// 2^m ? use len(node.Address)
+	//var hashMod = new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(len(node.FingerTable)-1)), nil)
 	// id = n (node n identifier)
 	id := node.Identifier
 	two := big.NewInt(2)
-	exponent := big.NewInt(int64(fingerentry) - 1) // fingerentry -1?
+	//exponent := big.NewInt(int64(len(node.FingerTable)) - 1) // fingerentry -1?
+	exponent := big.NewInt(int64(fingerTableSize) - 1)
 	//2^(k-1)
 	two.Exp(two, exponent, nil)
 	// n + 2^(k-1)
@@ -278,10 +286,10 @@ func (node *Node) fingerEntry(fingerentry int) *big.Int {
 }
 
 // refreshes finger table entries, next stores the index of the next finger to fix
-func (node *Node) fixFingers() {
+func (node *Node) fixFingers() error {
 	fmt.Println("*************** Invoke findSuccessor function ***************")
 	for {
-		node.next = (node.next + 1) % fingerTableSize
+		node.next = node.next + 1
 		//use 1-160, m = 160 next > m = next > fingerTableSize-1
 		if node.next > fingerTableSize-1 {
 			node.next = 1
@@ -289,7 +297,10 @@ func (node *Node) fixFingers() {
 		id := node.fingerEntry(node.next)
 		//find successor of id
 		_, addr := node.findSuccessor(id)
-
+		if addr != "" && addr != node.FingerTable[node.next].Address {
+			node.FingerTable[node.next].Address = addr
+			node.FingerTable[node.next].Id = id.Bytes()
+		}
 		/* 		result := FindSuccessorRPCReply{}
 		   		err := ChordCall(node.Address, "Node.FindSuccessorRPC", id, &result)
 		   		if err != nil {
@@ -299,11 +310,20 @@ func (node *Node) fixFingers() {
 		   		nextNode := result.SuccessorAddress */
 
 		//update fingerEntry(next)
-		if between(strHash(string(node.Address)), id, strHash(string(addr)), false) && addr != "" {
-			node.FingerTable[node.next].Id = id.Bytes()
-			node.FingerTable[node.next].Address = NodeAddress(addr)
-		} else {
-			node.next--
+		for {
+			node.next = node.next + 1
+			if node.next > fingerTableSize-1 {
+				node.next = 0
+				return nil
+			}
+
+			if between(strHash(string(node.Address)), id, strHash(string(addr)), false) && addr != "" {
+				node.FingerTable[node.next].Id = id.Bytes()
+				node.FingerTable[node.next].Address = NodeAddress(addr)
+			} else {
+				node.next--
+				return nil
+			}
 		}
 	}
 }
