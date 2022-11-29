@@ -30,6 +30,12 @@ type NodeAddress string // For node
 
 // FileAddress: [K]13 store in [N]14
 
+// fingerEntry represents a single finger table entry
+type fingerEntry struct {
+	Id      []byte      // ID hash of (n + 2^i) mod (2^m)
+	Address NodeAddress // RemoteNode that Start points to
+}
+
 type Node struct {
 	// Node attributes
 	Name       string   // Name: IP:Port or User specified Name. Exp: [N]14
@@ -37,8 +43,8 @@ type Node struct {
 
 	// For Chord search
 	Address     NodeAddress // Address should be "IP:Port"
-	FingerTable []NodeAddress
-	next 	    int // next stores the index of the next finger to fix. [1,m]
+	FingerTable []fingerEntry
+	next        int // next stores the index of the next finger to fix. [1,m]
 
 	// For Chord stabilization
 	Predecessor NodeAddress
@@ -77,7 +83,7 @@ func NewNode(args Arguments) *Node {
 	node.Address = args.Address
 	node.Name = args.ClientName
 	node.Identifier = strHash(string(node.Address))
-	node.FingerTable = make([]NodeAddress, fingerTableSize)
+	node.FingerTable = make([]fingerEntry, fingerTableSize)
 	node.next = 0 // next = 1?? todo: search paper again(by wang)
 	node.Predecessor = ""
 	node.Successors = make([]NodeAddress, args.Successors)
@@ -91,7 +97,8 @@ func NewNode(args Arguments) *Node {
 func (node *Node) initFingerTable() {
 	// Initialize finger table
 	for i := 0; i < fingerTableSize; i++ {
-		node.FingerTable[i] = node.Address
+		node.FingerTable[i].Address = node.Address
+		node.FingerTable[i].Id = node.Identifier.Bytes()
 	}
 }
 
@@ -195,7 +202,7 @@ func (node *Node) Notify(address string) error {
 	return nil
 }
 
-func(node *Node) FingerEntry(fingerentry int) *big.Int{
+func (node *Node) FingerEntry(fingerentry int) *big.Int {
 	// id = n (node n identifier)
 	id := node.Identifier
 	two := big.NewInt(2)
@@ -213,7 +220,7 @@ func (node *Node) FixFingers() {
 	//next stores the index of the next finger to fix.
 	node.next += 1
 	//use 1-160, m = 160 next > m = next > fingerTableSize-1
-	if node.next > fingerTableSize-1 { 
+	if node.next > fingerTableSize-1 {
 		node.next = 1
 	}
 	//id := node.FingerEntry(node.next)
@@ -257,8 +264,8 @@ func (node *Node) closePrecedingNode(requestID *big.Int) NodeAddress {
 	fmt.Println("************ Invoke closePrecedingNode function ************")
 	fingerTableSize := len(node.FingerTable)
 	for i := fingerTableSize - 1; i >= 1; i-- {
-		if between(node.Identifier, strHash(string(node.FingerTable[i])), requestID, true) {
-			return node.FingerTable[i]
+		if between(node.Identifier, strHash(string(node.FingerTable[i].Address)), requestID, true) {
+			return node.FingerTable[i].Address
 		}
 	}
 	return node.Successors[0]
