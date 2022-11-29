@@ -112,10 +112,23 @@ func (node *Node) initSuccessors() {
 
 func (node *Node) joinChord() {
 	// Todo: Join the Chord ring
+	// Find the successor of the node's identifier
+	// Set the node's predecessor to nil and successors to the successor
+	node.Predecessor = ""
+	flag, successor := node.findSuccessor(node.Identifier)
+	if flag {
+		for i := 0; i < len(successor); i++ {
+			// TODO: find successor should return a list of successors (size of -r)
+			node.Successors[i] = successor[i]
+		}
+	}
 }
 
 func (node *Node) createChord() {
-	// Todo: Create a Chord ring
+	// Create a new Chord ring
+	// Set the node's predecessor to nil and successors to itself
+	node.Predecessor = ""
+	node.Successors[0] = node.Address
 }
 
 func (node *Node) leaveChord() {
