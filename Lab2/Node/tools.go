@@ -21,11 +21,12 @@ import (
 // Main function + Node defination :Qi
 
 // Test with 10 nodes on Chord ring, finger table size should larger than 5
-var fingerTableSize = 7 // Use 1-6 Todo: 真的需要160的finger table吗？
+var fingerTableSize = 6 // Each finger table i contains the id of (n + 2^i) mod (2^m)th node. Use [0, 5] as i and space would be [(n+1)%64, (n+32)%64]
+var m = 6               // Chord space has 2^6 = 64 identifiers
 
 // 2^m
-var hashMod = new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(fingerTableSize-1)), nil)
-	
+var hashMod = new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(m-1)), nil)
+
 type Key string // For file
 
 type NodeAddress string // For node
