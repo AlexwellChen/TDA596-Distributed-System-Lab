@@ -7,7 +7,9 @@ import (
 	"flag"
 	"fmt"
 	"math/big"
+	"net"
 	"net/rpc"
+	"regexp"
 	"time"
 )
 
@@ -211,8 +213,8 @@ func GetCmdArgs() Arguments {
 	flag.DurationVar(&ts, "ts", 1000, "The time in milliseconds between invocations of stabilize.")
 	flag.DurationVar(&ttf, "ttf", 1000, "The time in milliseconds between invocations of fix_fingers.")
 	flag.DurationVar(&tcp, "tcp", 1000, "The time in milliseconds between invocations of check_predecessor.")
-	flag.IntVar(&r, "r", 3, "The number of successors to maintain.")
-	flag.StringVar(&i, "i", "Unspecified", "Client ID")
+	flag.IntVar(&r, "r", 4, "The number of successors to maintain.")
+	flag.StringVar(&i, "i", "Default", "Client ID")
 	flag.Parse()
 
 	// Return command line arguments
@@ -229,9 +231,67 @@ func GetCmdArgs() Arguments {
 	}
 }
 
-func CheckArgsValid(args Arguments) {
-	// Todo: Check if the command line arguments are valid
+func CheckArgsValid(args Arguments) int {
+	// Check if Ip address is valid or not
+	if net.ParseIP(string(args.Address)) == nil && args.Address != "localhost" {
+		fmt.Println("IP address is invalid")
+		return -1
+	}
+	// Check if port is valid
+	if args.Port < 1024 || args.Port > 65535 {
+		fmt.Println("Port number is invalid")
+		return -1
+	}
 
+	// Check if durations are valid
+	if args.Stabilize < 1 || args.Stabilize > 60000 {
+		fmt.Println("Stabilize time is invalid")
+		return -1
+	}
+	if args.FixFingers < 1 || args.FixFingers > 60000 {
+		fmt.Println("FixFingers time is invalid")
+		return -1
+	}
+	if args.CheckPred < 1 || args.CheckPred > 60000 {
+		fmt.Println("CheckPred time is invalid")
+		return -1
+	}
+
+	// Check if number of successors is valid
+	if args.Successors < 1 || args.Successors > 32 {
+		fmt.Println("Successors number is invalid")
+		return -1
+	}
+
+	// Check if client ID is s a valid string matching the regular expression [0-9a-fA-F]{40}
+	if args.ClientID != "Default" {
+		matched, err := regexp.MatchString("[0-9a-fA-F]{40}", args.ClientID)
+		if err != nil || !matched {
+			fmt.Println("Client ID is invalid")
+			return -1
+		}
+	}
+
+	// Check if joining address and port is valid or not
+	if args.JoinAddress != "Unspecified" {
+		// Addr is specified, check if addr & port are valid
+		if net.ParseIP(string(args.JoinAddress)) != nil || args.JoinAddress == "localhost" {
+			// Check if join port is valid
+			if args.JoinPort < 1024 || args.JoinPort > 65535 {
+				fmt.Println("Join port number is invalid")
+				return -1
+			}
+			// Join the chord
+			return 0
+		} else {
+			fmt.Println("Joining address is invalid")
+			return -1
+		}
+	} else {
+		// Join address is not specified, create a new chord ring
+		// ignroe jp input
+		return 1
+	}
 }
 
 // func call(address string, method string, request interface{}, reply interface{}) error{
