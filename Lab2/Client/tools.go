@@ -19,6 +19,9 @@ import (
 
 var fingerTableSize = 161 // Use 1-160 Todo: 真的需要160的finger table吗？
 
+// 2^m
+var hashMod = new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(fingerTableSize-1)), nil)
+
 type Key string // For file
 
 type NodeAddress string // For node
@@ -33,6 +36,7 @@ type Node struct {
 	// For Chord search
 	Address     NodeAddress // Address should be "IP:Port"
 	FingerTable []NodeAddress
+	next 	    int // next stores the index of the next finger to fix. [1,m]
 
 	// For Chord stabilization
 	Predecessor NodeAddress
@@ -72,6 +76,7 @@ func NewNode(args Arguments) *Node {
 	node.Name = args.ClientName
 	node.Identifier = strHash(string(node.Address))
 	node.FingerTable = make([]NodeAddress, fingerTableSize)
+	node.next = 0 // next = 1?? todo: search paper again(by wang)
 	node.Predecessor = ""
 	node.Successors = make([]NodeAddress, args.Successors)
 	node.Bucket = make(map[Key]string)
@@ -171,8 +176,30 @@ func (node *Node) Notify(address string) error {
 	return nil
 }
 
+func(node *Node) FingerEntry(fingerentry int) *big.Int{
+	// id = n (node n identifier)
+	id := node.Identifier
+	two := big.NewInt(2)
+	exponent := big.NewInt(int64(fingerentry) - 1) // fingerentry -1?
+	//2^(k-1)
+	two.Exp(two, exponent, nil)
+	// n + 2^(k-1)
+	id.Add(id, two)
+	// (n + 2^(k-1) ) mod 2^m , 1 <= k <= m
+	return id.Mod(id, hashMod)
+}
+
 func (node *Node) FixFingers() {
 	//Todo: refreshes finger table entries
+	//next stores the index of the next finger to fix.
+	node.next += 1
+	//use 1-160, m = 160 next > m = next > fingerTableSize-1
+	if node.next > fingerTableSize-1 { 
+		node.next = 1
+	}
+	//id := node.FingerEntry(node.next)
+	//find successor of id
+	//found, addr := node.findSuccessor(string(id))
 }
 
 /*------------------------------------------------------------*/
