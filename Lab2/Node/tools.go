@@ -96,11 +96,10 @@ func NewNode(args Arguments) *Node {
 	return node
 }
 
-
 /*
 * @description: fingerEntry.Id could be seen as the Chord ring address
 * 	            fingerEntry.Address is the real ip address of the file exist node or the node itself
-*/
+ */
 func (node *Node) initFingerTable() {
 	// Initialize finger table
 	for i := 0; i < fingerTableSize; i++ {
