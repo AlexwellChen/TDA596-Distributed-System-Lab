@@ -33,7 +33,7 @@ type NodeAddress string // For node
 // fingerEntry represents a single finger table entry
 type fingerEntry struct {
 	Id      []byte      // ID hash of (n + 2^i) mod (2^m)
-	Address NodeAddress // RemoteNode that Start points to
+	Address NodeAddress // RemoteAddress
 }
 
 type Node struct {
@@ -132,11 +132,14 @@ func (node *Node) printState() {
 	fmt.Println("Node Predecessor: ", node.Predecessor)
 	fmt.Println("Node Successors: ")
 	for i := 0; i < len(node.Successors); i++ {
-		fmt.Println(node.Successors[i])
+		fmt.Println("Successor ", i, ": ", node.Successors[i])
 	}
 	fmt.Println("Node Finger Table: ")
 	for i := 0; i < fingerTableSize; i++ {
-		fmt.Println(node.FingerTable[i])
+		enrty := node.FingerTable[i]
+		id := new(big.Int).SetBytes(enrty.Id)
+		address := enrty.Address
+		fmt.Println("Finger ", i, ": ", id, " ", address)
 	}
 }
 
