@@ -19,9 +19,9 @@ import (
 
 var fingerTableSize = 161 // Use 1-160 Todo: 真的需要160的finger table吗？
 
-type Key string
+type Key string // For file
 
-type NodeAddress string
+type NodeAddress string // For node
 
 // FileAddress: [K]13 store in [N]14
 
@@ -190,28 +190,28 @@ type FindSuccessorRPCReply struct {
 * @return: 		found: whether the key is found
 * 				successor: the successor of the key
  */
-func (node *Node) FindSuccessorRPC(requestID Key, reply *FindSuccessorRPCReply) error {
+func (node *Node) FindSuccessorRPC(requestID string, reply *FindSuccessorRPCReply) error {
 	fmt.Println("-------------- Invoke FindSuccessor_RPC function ------------")
 	reply.found, reply.SuccessorAddress = node.findSuccessor(requestID)
 	return nil
 }
 
 // Local use function
-func (node *Node) findSuccessor(id Key) (bool, NodeAddress) {
+func (node *Node) findSuccessor(requestID string) (bool, NodeAddress) {
 	fmt.Println("*************** Invoke findSuccessor function ***************")
-	if between(node.Identifier, strHash(string(id)), strHash(string(node.Successors[0])), true) {
+	if between(node.Identifier, strHash(requestID), strHash(string(node.Successors[0])), true) {
 		return true, node.Successors[0]
 	} else {
-		return false, node.closePrecedingNode(id)
+		return false, node.closePrecedingNode(requestID)
 	}
 }
 
 // Local use function
-func (node *Node) closePrecedingNode(id Key) NodeAddress {
+func (node *Node) closePrecedingNode(requestID string) NodeAddress {
 	fmt.Println("************ Invoke closePrecedingNode function ************")
 	fingerTableSize := len(node.FingerTable)
 	for i := fingerTableSize - 1; i >= 1; i-- {
-		if between(node.Identifier, strHash(string(node.FingerTable[i])), strHash(string(id)), true) {
+		if between(node.Identifier, strHash(string(node.FingerTable[i])), strHash(requestID), true) {
 			return node.FingerTable[i]
 		}
 	}
@@ -219,8 +219,8 @@ func (node *Node) closePrecedingNode(id Key) NodeAddress {
 }
 
 // Local use function
-func find(id Key, startNode NodeAddress) NodeAddress {
-	fmt.Println("------------------- Invoke Find function --------------------")
+func find(id string, startNode NodeAddress) NodeAddress {
+	fmt.Println("****************** Invoke find function *********************")
 	found := false
 	nextNode := startNode
 	i := 0
