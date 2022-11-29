@@ -19,7 +19,8 @@ import (
 
 // Main function + Node defination :Qi
 
-var fingerTableSize = 161 // Use 1-160 Todo: 真的需要160的finger table吗？
+// Test with 10 nodes on Chord ring, finger table size should larger than 5
+var fingerTableSize = 7 // Use 1-6 Todo: 真的需要160的finger table吗？
 
 // 2^m
 var hashMod = new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(fingerTableSize-1)), nil)
@@ -94,11 +95,22 @@ func NewNode(args Arguments) *Node {
 	return node
 }
 
+
+/*
+* @description: fingerEntry.Id could be seen as the Chord ring address
+* 	            fingerEntry.Address is the real ip address of the file exist node or the node itself
+*/
 func (node *Node) initFingerTable() {
 	// Initialize finger table
 	for i := 0; i < fingerTableSize; i++ {
+		// Caculate the id of the ith finger
+		// id = (n + 2^i) mod (2^m)
+		id := new(big.Int).Add(node.Identifier, new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(i)), nil))
+		id.Mod(id, hashMod)
+		node.FingerTable[i].Id = id.Bytes()
+
+		// Address is the acutal ip address of the nodes on Chord ring
 		node.FingerTable[i].Address = node.Address
-		node.FingerTable[i].Id = node.Identifier.Bytes()
 	}
 }
 
@@ -132,14 +144,14 @@ func (node *Node) printState() {
 	fmt.Println("Node Predecessor: ", node.Predecessor)
 	fmt.Println("Node Successors: ")
 	for i := 0; i < len(node.Successors); i++ {
-		fmt.Println("Successor ", i, ": ", node.Successors[i])
+		fmt.Println("Successor ", i, " address: ", node.Successors[i])
 	}
 	fmt.Println("Node Finger Table: ")
 	for i := 0; i < fingerTableSize; i++ {
 		enrty := node.FingerTable[i]
 		id := new(big.Int).SetBytes(enrty.Id)
 		address := enrty.Address
-		fmt.Println("Finger ", i, ": ", id, " ", address)
+		fmt.Println("Finger ", i, " id: ", id, ", address: ", address)
 	}
 }
 
