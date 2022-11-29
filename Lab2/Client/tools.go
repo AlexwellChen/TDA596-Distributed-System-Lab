@@ -186,7 +186,7 @@ type FindSuccessorRPCReply struct {
 
 /*
 * @description: RPC method Packaging for FindSuccessor, running on remote node
-* @param: 		requestID: the client ID to be searched
+* @param: 		requestID: the client address or file name to be searched
 * @return: 		found: whether the key is found
 * 				successor: the successor of the key
  */
