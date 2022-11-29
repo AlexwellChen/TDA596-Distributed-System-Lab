@@ -1,9 +1,10 @@
-package main
+package Lab2
 
 import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha1"
+	"errors"
 	"flag"
 	"fmt"
 	"math/big"
@@ -19,10 +20,12 @@ import (
 
 // Main function + Node defination :Qi
 
-var fingerTableSize = 161 // Use 1-160 Todo: 真的需要160的finger table吗？
+// Test with 10 nodes on Chord ring, finger table size should larger than 5
+var fingerTableSize = 6 // Each finger table i contains the id of (n + 2^i) mod (2^m)th node. Use [0, 5] as i and space would be [(n+1)%64, (n+32)%64]
+var m = 6               // Chord space has 2^6 = 64 identifiers
 
 // 2^m
-var hashMod = new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(fingerTableSize-1)), nil)
+var hashMod = new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(m)), nil)
 
 type Key string // For file
 
@@ -84,7 +87,7 @@ func NewNode(args Arguments) *Node {
 	node.Name = args.ClientName
 	node.Identifier = strHash(string(node.Address))
 	node.FingerTable = make([]fingerEntry, fingerTableSize)
-	node.next = 0 // next = 1?? todo: search paper again(by wang)
+	node.next = 0
 	node.Predecessor = ""
 	node.Successors = make([]NodeAddress, args.Successors)
 	node.Bucket = make(map[Key]string)
@@ -94,11 +97,21 @@ func NewNode(args Arguments) *Node {
 	return node
 }
 
+/*
+* @description: fingerEntry.Id could be seen as the Chord ring address
+* 	            fingerEntry.Address is the real ip address of the file exist node or the node itself
+ */
 func (node *Node) initFingerTable() {
 	// Initialize finger table
 	for i := 0; i < fingerTableSize; i++ {
+		// Caculate the id of the ith finger
+		// id = (n + 2^i) mod (2^m)
+		id := new(big.Int).Add(node.Identifier, new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(i)), nil))
+		id.Mod(id, hashMod)
+		node.FingerTable[i].Id = id.Bytes()
+
+		// Address is the acutal ip address of the nodes on Chord ring
 		node.FingerTable[i].Address = node.Address
-		node.FingerTable[i].Id = node.Identifier.Bytes()
 	}
 }
 
@@ -145,14 +158,14 @@ func (node *Node) printState() {
 	fmt.Println("Node Predecessor: ", node.Predecessor)
 	fmt.Println("Node Successors: ")
 	for i := 0; i < len(node.Successors); i++ {
-		fmt.Println("Successor ", i, ": ", node.Successors[i])
+		fmt.Println("Successor ", i, " address: ", node.Successors[i])
 	}
 	fmt.Println("Node Finger Table: ")
 	for i := 0; i < fingerTableSize; i++ {
 		enrty := node.FingerTable[i]
 		id := new(big.Int).SetBytes(enrty.Id)
 		address := enrty.Address
-		fmt.Println("Finger ", i, ": ", id, " ", address)
+		fmt.Println("Finger ", i, " id: ", id, ", address: ", address)
 	}
 }
 
@@ -179,25 +192,84 @@ func ChordCall(targetNode NodeAddress, method string, request interface{}, reply
 	return err
 }
 
-/*------------------------------------------------------------
-                Stabilizing Functions Below	By:wang
---------------------------------------------------------------*/
+/*
+------------------------------------------------------------
 
-func (node *Node) Stabilize() {
-	// Todo: Stabilize the Chord ring
-	// next stores the index of the next finger to fix.
+	Stabilizing Functions Below	By:wang
+
+--------------------------------------------------------------
+*/
+// get node's predecessor
+func (node *Node) GetPredecessor(none *struct{}, predecessor *NodeAddress) error {
+	fmt.Println("-------------- Invoke GetPredecessor function --------------")
+	*predecessor = node.Predecessor
+	if node.Predecessor == "" {
+		return errors.New("predecessor is empty")
+	} else {
+		return nil
+	}
+}
+
+// get node's successorList
+func (node *Node) GetSuccessorList(none *struct{}, successorList *[]NodeAddress) error {
+	fmt.Println("-------------- Invoke GetSuccessorList function -------------")
+	*successorList = node.Successors[:]
+	return nil
+}
+
+// verifies n’s immediate
+func (node *Node) stabilize() error {
+	//Todo: search paper 看看是每个successor都要修改prodecessor还是只修改第一个successor
+	//Todo: search paper 看看是不是要fix successorList
+	fmt.Println("***************** Invoke stabilize function *****************")
+	var successors []NodeAddress
+	err := ChordCall(node.Successors[0], "Node.GetSuccessorList", struct{}{}, &successors)
+	if err == nil {
+		for i := 0; i < len(successors); i++ {
+			node.Successors[i+1] = successors[i]
+		}
+	} else {
+		fmt.Println("GetSuccessorList failed")
+		if node.Successors[0] == "" {
+			fmt.Println("Node Successor[0] is empty -> use self as successor")
+			node.Successors[0] = node.Address
+		} else {
+			for i := 0; i < len(node.Successors); i++ {
+				if i == len(node.Successors)-1 {
+					node.Successors[i] = ""
+				} else {
+					node.Successors[i] = successors[i+1]
+				}
+			}
+		}
+	}
+	var predecessor NodeAddress = ""
+	err = ChordCall(node.Successors[0], "Node.GetPredecessor", struct{}{}, &predecessor)
+	if err == nil {
+		if predecessor != "" && between(strHash(string(node.Address)),
+			strHash(string(predecessor)), strHash(string(node.Successors[0])), false) {
+			node.Successors[0] = predecessor
+		}
+	}
+
+	err = ChordCall(node.Successors[0], "Node.Notify", node.Address, &struct{}{})
+	if err != nil {
+		fmt.Println("Notify failed")
+	}
+	return nil
 
 }
 
 // check whether predecessor has failed
-func (node *Node) CheckPredecessor() error {
+func (node *Node) checkPredecessor() error {
+	fmt.Println("************* Invoke checkPredecessor function **************")
 	pred := node.Predecessor
 	if pred != "" {
 		//check connection
 		client, err := rpc.DialHTTP("tcp", string(pred))
 		//if connection failed, set predecessor to nil
 		if err != nil {
-			fmt.Printf("Predecessor %v has failed", pred)
+			fmt.Printf("Predecessor %s has failed", string(pred))
 			node.Predecessor = ""
 		} else {
 			client.Close()
@@ -206,23 +278,30 @@ func (node *Node) CheckPredecessor() error {
 	return nil
 }
 
-// Notify tells the node at 'address' that it might be our predecessor
-func (node *Node) Notify(address string) error {
+// 'address' thinks it might be our predecessor
+func (node *Node) Notify(address NodeAddress) error {
+	fmt.Println("------------------- Invoke Notify function ------------------")
 	//if (predecessor is nil or n' ∈ (predecessor, n))
 	if node.Predecessor == "" ||
 		between(strHash(string(node.Predecessor)),
-			strHash(address), strHash(string(node.Address)), false) {
+			strHash(string(address)), strHash(string(node.Address)), false) {
 		//predecessor = n'
-		node.Predecessor = NodeAddress(address)
+		node.Predecessor = address
 	}
 	return nil
 }
 
-func (node *Node) FingerEntry(fingerentry int) *big.Int {
+// calculate (n + 2^(k-1) ) mod 2^m
+func (node *Node) fingerEntry(fingerentry int) *big.Int {
+	//Todo: check if use len(node.Address) or fingerTableSize
+	fmt.Println("************** Invoke fingerEntry function ******************")
+	// 2^m ? use len(node.Address)
+	//var hashMod = new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(len(node.FingerTable)-1)), nil)
 	// id = n (node n identifier)
 	id := node.Identifier
 	two := big.NewInt(2)
-	exponent := big.NewInt(int64(fingerentry) - 1) // fingerentry -1?
+	//exponent := big.NewInt(int64(len(node.FingerTable)) - 1) // fingerentry -1?
+	exponent := big.NewInt(int64(fingerentry - 1))
 	//2^(k-1)
 	two.Exp(two, exponent, nil)
 	// n + 2^(k-1)
@@ -231,17 +310,48 @@ func (node *Node) FingerEntry(fingerentry int) *big.Int {
 	return id.Mod(id, hashMod)
 }
 
-func (node *Node) FixFingers() {
-	//Todo: refreshes finger table entries
-	//next stores the index of the next finger to fix.
-	node.next += 1
-	//use 1-160, m = 160 next > m = next > fingerTableSize-1
-	if node.next > fingerTableSize-1 {
-		node.next = 1
+// refreshes finger table entries, next stores the index of the next finger to fix
+func (node *Node) fixFingers() error {
+	//Todo: search paper check node.next 在到了m的时候是不是要从1开始还是0，以及初始化
+	fmt.Println("*************** Invoke findSuccessor function ***************")
+	for {
+		node.next = node.next + 1
+		//use 1-160, m = 160 next > m = next > fingerTableSize-1
+		if node.next > fingerTableSize-1 {
+			node.next = 1
+		}
+		id := node.fingerEntry(node.next)
+		//find successor of id
+		_, addr := node.findSuccessor(id)
+		if addr != "" && addr != node.FingerTable[node.next].Address {
+			node.FingerTable[node.next].Address = addr
+			node.FingerTable[node.next].Id = id.Bytes()
+		}
+		/* 		result := FindSuccessorRPCReply{}
+		   		err := ChordCall(node.Address, "Node.FindSuccessorRPC", id, &result)
+		   		if err != nil {
+		   			fmt.Println(err)
+		   			break
+		   		}
+		   		nextNode := result.SuccessorAddress */
+
+		//update fingerEntry(next)
+		for {
+			node.next = node.next + 1
+			if node.next > fingerTableSize-1 {
+				node.next = 0
+				return nil
+			}
+
+			if between(strHash(string(node.Address)), id, strHash(string(addr)), false) && addr != "" {
+				node.FingerTable[node.next].Id = id.Bytes()
+				node.FingerTable[node.next].Address = NodeAddress(addr)
+			} else {
+				node.next--
+				return nil
+			}
+		}
 	}
-	//id := node.FingerEntry(node.next)
-	//find successor of id
-	//found, addr := node.findSuccessor(string(id))
 }
 
 /*------------------------------------------------------------*/
