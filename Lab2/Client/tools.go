@@ -7,7 +7,9 @@ import (
 	"flag"
 	"fmt"
 	"math/big"
+	"net"
 	"net/rpc"
+	"regexp"
 	"time"
 )
 
@@ -18,6 +20,9 @@ import (
 // Main function + Node defination :Qi
 
 var fingerTableSize = 161 // Use 1-160 Todo: 真的需要160的finger table吗？
+
+// 2^m
+var hashMod = new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(fingerTableSize-1)), nil)
 
 type Key string // For file
 
@@ -33,6 +38,7 @@ type Node struct {
 	// For Chord search
 	Address     NodeAddress // Address should be "IP:Port"
 	FingerTable []NodeAddress
+	next 	    int // next stores the index of the next finger to fix. [1,m]
 
 	// For Chord stabilization
 	Predecessor NodeAddress
@@ -72,6 +78,7 @@ func NewNode(args Arguments) *Node {
 	node.Name = args.ClientName
 	node.Identifier = strHash(string(node.Address))
 	node.FingerTable = make([]NodeAddress, fingerTableSize)
+	node.next = 0 // next = 1?? todo: search paper again(by wang)
 	node.Predecessor = ""
 	node.Successors = make([]NodeAddress, args.Successors)
 	node.Bucket = make(map[Key]string)
@@ -188,8 +195,30 @@ func (node *Node) Notify(address string) error {
 	return nil
 }
 
+func(node *Node) FingerEntry(fingerentry int) *big.Int{
+	// id = n (node n identifier)
+	id := node.Identifier
+	two := big.NewInt(2)
+	exponent := big.NewInt(int64(fingerentry) - 1) // fingerentry -1?
+	//2^(k-1)
+	two.Exp(two, exponent, nil)
+	// n + 2^(k-1)
+	id.Add(id, two)
+	// (n + 2^(k-1) ) mod 2^m , 1 <= k <= m
+	return id.Mod(id, hashMod)
+}
+
 func (node *Node) FixFingers() {
 	//Todo: refreshes finger table entries
+	//next stores the index of the next finger to fix.
+	node.next += 1
+	//use 1-160, m = 160 next > m = next > fingerTableSize-1
+	if node.next > fingerTableSize-1 { 
+		node.next = 1
+	}
+	//id := node.FingerEntry(node.next)
+	//find successor of id
+	//found, addr := node.findSuccessor(string(id))
 }
 
 /*------------------------------------------------------------*/
@@ -300,8 +329,8 @@ func getCmdArgs() Arguments {
 	flag.DurationVar(&ts, "ts", 1000, "The time in milliseconds between invocations of stabilize.")
 	flag.DurationVar(&ttf, "ttf", 1000, "The time in milliseconds between invocations of fix_fingers.")
 	flag.DurationVar(&tcp, "tcp", 1000, "The time in milliseconds between invocations of check_predecessor.")
-	flag.IntVar(&r, "r", 3, "The number of successors to maintain.")
-	flag.StringVar(&i, "i", "Unspecified", "Client name")
+	flag.IntVar(&r, "r", 4, "The number of successors to maintain.")
+	flag.StringVar(&i, "i", "Default", "Client ID")
 	flag.Parse()
 
 	// Return command line arguments
@@ -318,9 +347,67 @@ func getCmdArgs() Arguments {
 	}
 }
 
-func checkArgsValid(args Arguments) {
-	// Todo: Check if the command line arguments are valid
+func CheckArgsValid(args Arguments) int {
+	// Check if Ip address is valid or not
+	if net.ParseIP(string(args.Address)) == nil && args.Address != "localhost" {
+		fmt.Println("IP address is invalid")
+		return -1
+	}
+	// Check if port is valid
+	if args.Port < 1024 || args.Port > 65535 {
+		fmt.Println("Port number is invalid")
+		return -1
+	}
 
+	// Check if durations are valid
+	if args.Stabilize < 1 || args.Stabilize > 60000 {
+		fmt.Println("Stabilize time is invalid")
+		return -1
+	}
+	if args.FixFingers < 1 || args.FixFingers > 60000 {
+		fmt.Println("FixFingers time is invalid")
+		return -1
+	}
+	if args.CheckPred < 1 || args.CheckPred > 60000 {
+		fmt.Println("CheckPred time is invalid")
+		return -1
+	}
+
+	// Check if number of successors is valid
+	if args.Successors < 1 || args.Successors > 32 {
+		fmt.Println("Successors number is invalid")
+		return -1
+	}
+
+	// Check if client ID is s a valid string matching the regular expression [0-9a-fA-F]{40}
+	if args.ClientName != "Default" {
+		matched, err := regexp.MatchString("[0-9a-fA-F]{40}", args.ClientName)
+		if err != nil || !matched {
+			fmt.Println("Client ID is invalid")
+			return -1
+		}
+	}
+
+	// Check if joining address and port is valid or not
+	if args.JoinAddress != "Unspecified" {
+		// Addr is specified, check if addr & port are valid
+		if net.ParseIP(string(args.JoinAddress)) != nil || args.JoinAddress == "localhost" {
+			// Check if join port is valid
+			if args.JoinPort < 1024 || args.JoinPort > 65535 {
+				fmt.Println("Join port number is invalid")
+				return -1
+			}
+			// Join the chord
+			return 0
+		} else {
+			fmt.Println("Joining address is invalid")
+			return -1
+		}
+	} else {
+		// Join address is not specified, create a new chord ring
+		// ignroe jp input
+		return 1
+	}
 }
 
 // func call(address string, method string, request interface{}, reply interface{}) error{
