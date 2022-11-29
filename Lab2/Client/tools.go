@@ -21,19 +21,19 @@ import (
 
 var fingerTableSize = 161 // Use 1-160 Todo: 真的需要160的finger table吗？
 
-type Key string
+type Key string // For file
 
-type NodeAddress string
+type NodeAddress string // For node
 
 // FileAddress: [K]13 store in [N]14
 
 type Node struct {
 	// Node attributes
-	Name       string // Name: IP:Port or User specified Name. Exp: [N]14
-	Identifier Key    // Hash(Name) -> Chord space Identifier
+	Name       string   // Name: IP:Port or User specified Name. Exp: [N]14
+	Identifier *big.Int // Hash(Address) -> Chord space Identifier
 
 	// For Chord search
-	Address     NodeAddress // Address: IP:Port
+	Address     NodeAddress // Address should be "IP:Port"
 	FingerTable []NodeAddress
 
 	// For Chord stabilization
@@ -45,17 +45,18 @@ type Node struct {
 	PublicKey  *rsa.PublicKey
 
 	Bucket map[Key]string // Hash Key -> File name value store
-	// Exp:
-	//      ------------Store File-------------
-	//      Hash(Hello.txt) -> 123
-	// 		Bucket[123] = Hello.txt
+	/* Exp:
+	     ------------Store File-------------
+	     	Hash(Hello.txt) -> 123
+			Bucket[123] = Hello.txt
 
-	//      -------------Read File-------------
-	//      FilePath = Bucket[123]
-	// 		ReadFile(FilePath) -> Hello World
+	     -------------Read File-------------
+	     	FileName = Bucket[123]
+			ReadFile(FileName) -> Hello World
+	*/
 }
 
-func (node *Node) GenerateRSAKey(bits int) {
+func (node *Node) generateRSAKey(bits int) {
 	// GenerateKey函数使用随机数据生成器random生成一对具有指定字位数的RSA密钥
 	// Reader是一个全局、共享的密码用强随机数生成器
 	privateKey, err := rsa.GenerateKey(rand.Reader, bits)
@@ -67,25 +68,29 @@ func (node *Node) GenerateRSAKey(bits int) {
 }
 
 func NewNode(args Arguments) *Node {
-	// Initialize node
+	// Create a new node
 	node := &Node{}
 	node.Address = args.Address
+	node.Name = args.ClientName
+	node.Identifier = strHash(string(node.Address))
 	node.FingerTable = make([]NodeAddress, fingerTableSize)
 	node.Predecessor = ""
 	node.Successors = make([]NodeAddress, args.Successors)
 	node.Bucket = make(map[Key]string)
-	node.GenerateRSAKey(2048)
+	node.generateRSAKey(2048)
+	node.initFingerTable()
+	node.initSuccessors()
 	return node
 }
 
-func (node *Node) InitFingerTable() {
+func (node *Node) initFingerTable() {
 	// Initialize finger table
 	for i := 0; i < fingerTableSize; i++ {
 		node.FingerTable[i] = node.Address
 	}
 }
 
-func (node *Node) InitSuccessors() {
+func (node *Node) initSuccessors() {
 	// Initialize successors
 	successorsSize := len(node.Successors)
 	for i := 0; i < successorsSize; i++ {
@@ -93,17 +98,40 @@ func (node *Node) InitSuccessors() {
 	}
 }
 
-func (node *Node) JoinChord() {
+func (node *Node) joinChord() {
 	// Todo: Join the Chord ring
 }
 
-func (node *Node) CreateChord() {
+func (node *Node) createChord() {
 	// Todo: Create a Chord ring
 }
 
-func (node *Node) LeaveChord() {
+func (node *Node) leaveChord() {
 	// Todo: Leave the Chord ring
 	// For failure handling, backup the data in the bucket to the successor (Bonus)
+}
+
+/*------------------------------------------------------------*/
+/*                  Comm Interface By: Alexwell               */
+/*------------------------------------------------------------*/
+
+/*
+* @description: Communication interface between nodes
+* @param: 		targetNode: the address of the node to be connected
+* @param: 		method: the name of the method to be called, e.g. "Node.FindSuccessorRPC".
+*						method need to be registered in the RPC server, and have Golang compliant RPC method style
+* @param:		request: the request to be sent
+* @param:		reply: the reply to be received
+* @return:		error: the error returned by the RPC call
+ */
+func ChordCall(targetNode NodeAddress, method string, request interface{}, reply interface{}) error {
+	client, err := rpc.DialHTTP("tcp", string(targetNode))
+	if err != nil {
+		return err
+	}
+	defer client.Close()
+	err = client.Call(method, request, &reply)
+	return err
 }
 
 /*------------------------------------------------------------
@@ -137,8 +165,8 @@ func (node *Node) CheckPredecessor() error {
 func (node *Node) Notify(address string) error {
 	//if (predecessor is nil or n' ∈ (predecessor, n))
 	if node.Predecessor == "" ||
-		between(StrHash(string(node.Predecessor)),
-			StrHash(address), StrHash(string(node.Address)), false) {
+		between(strHash(string(node.Predecessor)),
+			strHash(address), strHash(string(node.Address)), false) {
 		//predecessor = n'
 		node.Predecessor = NodeAddress(address)
 	}
@@ -150,29 +178,74 @@ func (node *Node) FixFingers() {
 }
 
 /*------------------------------------------------------------*/
-/*                  Routing Functions Below By:Alexwell       */
+/*                  Routing Functions By: Alexwell            */
 /*------------------------------------------------------------*/
 
-func (node *Node) FindSuccessor(id Key) NodeAddress {
-	// Todo: Find the successor of the given id iterativly
-	return node.Address // Fake return
+type FindSuccessorRPCReply struct {
+	found            bool
+	SuccessorAddress NodeAddress
 }
 
-func (node *Node) ClosePrecedingNode() {
-
+/*
+* @description: RPC method Packaging for FindSuccessor, running on remote node
+* @param: 		requestID: the client address or file name to be searched
+* @return: 		found: whether the key is found
+* 				successor: the successor of the key
+ */
+func (node *Node) FindSuccessorRPC(requestID string, reply *FindSuccessorRPCReply) error {
+	fmt.Println("-------------- Invoke FindSuccessor_RPC function ------------")
+	reply.found, reply.SuccessorAddress = node.findSuccessor(requestID)
+	return nil
 }
 
-func StrHash(elt string) *big.Int {
-	hasher := sha1.New()
-	hasher.Write([]byte(elt))
-	return new(big.Int).SetBytes(hasher.Sum(nil))
-}
-
-func between(start, elt, end *big.Int, inclusive bool) bool {
-	if end.Cmp(start) > 0 {
-		return (start.Cmp(elt) < 0 && elt.Cmp(end) < 0) || (inclusive && elt.Cmp(end) == 0)
+// Local use function
+func (node *Node) findSuccessor(requestID string) (bool, NodeAddress) {
+	fmt.Println("*************** Invoke findSuccessor function ***************")
+	if between(node.Identifier, strHash(requestID), strHash(string(node.Successors[0])), true) {
+		return true, node.Successors[0]
 	} else {
-		return start.Cmp(elt) < 0 || elt.Cmp(end) < 0 || (inclusive && elt.Cmp(end) == 0)
+		return false, node.closePrecedingNode(requestID)
+	}
+}
+
+// Local use function
+func (node *Node) closePrecedingNode(requestID string) NodeAddress {
+	fmt.Println("************ Invoke closePrecedingNode function ************")
+	fingerTableSize := len(node.FingerTable)
+	for i := fingerTableSize - 1; i >= 1; i-- {
+		if between(node.Identifier, strHash(string(node.FingerTable[i])), strHash(requestID), true) {
+			return node.FingerTable[i]
+		}
+	}
+	return node.Successors[0]
+}
+
+// Local use function
+func find(id string, startNode NodeAddress) NodeAddress {
+	fmt.Println("****************** Invoke find function *********************")
+	found := false
+	nextNode := startNode
+	i := 0
+	maxSteps := 10
+	for !found && i < maxSteps {
+		// Todo: Send request to nextNode, execute FindSuccessor(id), and return the result
+		// found, nextNode = nextNode.FindSuccessor(id)
+		result := FindSuccessorRPCReply{}
+		err := ChordCall(nextNode, "Node.FindSuccessorRPC", id, &result)
+		if err != nil {
+			fmt.Println(err)
+			break
+		}
+		found = result.found
+		nextNode = result.SuccessorAddress
+		i++
+	}
+	if found {
+		fmt.Println("Find Success in ", i, " steps.")
+		return nextNode
+	} else {
+		fmt.Println("Find Failed, please try again.")
+		return "-1"
 	}
 }
 
@@ -190,10 +263,10 @@ type Arguments struct {
 	FixFingers  time.Duration // The time in milliseconds between invocations of fix_fingers.
 	CheckPred   time.Duration // The time in milliseconds between invocations of check_predecessor.
 	Successors  int
-	ClientID    string
+	ClientName  string
 }
 
-func GetCmdArgs() Arguments {
+func getCmdArgs() Arguments {
 	// Read command line arguments
 	var a string          // Current node address
 	var p int             // Current node port
@@ -203,7 +276,7 @@ func GetCmdArgs() Arguments {
 	var ttf time.Duration // The time in milliseconds between invocations of fix_fingers.
 	var tcp time.Duration // The time in milliseconds between invocations of check_predecessor.
 	var r int             // The number of successors to maintain.
-	var i string          // Client ID
+	var i string          // Client name
 
 	// Parse command line arguments
 	flag.StringVar(&a, "a", "localhost", "Current node address")
@@ -227,7 +300,7 @@ func GetCmdArgs() Arguments {
 		FixFingers:  ttf,
 		CheckPred:   tcp,
 		Successors:  r,
-		ClientID:    i,
+		ClientName:  i,
 	}
 }
 
@@ -264,8 +337,8 @@ func CheckArgsValid(args Arguments) int {
 	}
 
 	// Check if client ID is s a valid string matching the regular expression [0-9a-fA-F]{40}
-	if args.ClientID != "Default" {
-		matched, err := regexp.MatchString("[0-9a-fA-F]{40}", args.ClientID)
+	if args.ClientName != "Default" {
+		matched, err := regexp.MatchString("[0-9a-fA-F]{40}", args.ClientName)
 		if err != nil || !matched {
 			fmt.Println("Client ID is invalid")
 			return -1
@@ -297,3 +370,17 @@ func CheckArgsValid(args Arguments) int {
 // func call(address string, method string, request interface{}, reply interface{}) error{
 // 	return rpc.NewClientWithCodec(jsonrpc.NewClientCodec(
 // }
+
+func strHash(elt string) *big.Int {
+	hasher := sha1.New()
+	hasher.Write([]byte(elt))
+	return new(big.Int).SetBytes(hasher.Sum(nil))
+}
+
+func between(start, elt, end *big.Int, inclusive bool) bool {
+	if end.Cmp(start) > 0 {
+		return (start.Cmp(elt) < 0 && elt.Cmp(end) < 0) || (inclusive && elt.Cmp(end) == 0)
+	} else {
+		return start.Cmp(elt) < 0 || elt.Cmp(end) < 0 || (inclusive && elt.Cmp(end) == 0)
+	}
+}
