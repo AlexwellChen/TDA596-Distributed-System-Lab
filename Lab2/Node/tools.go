@@ -25,7 +25,7 @@ var fingerTableSize = 6 // Each finger table i contains the id of (n + 2^i) mod 
 var m = 6               // Chord space has 2^6 = 64 identifiers
 
 // 2^m
-var hashMod = new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(m-1)), nil)
+var hashMod = new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(m)), nil)
 
 type Key string // For file
 
@@ -288,7 +288,7 @@ func (node *Node) fingerEntry(fingerentry int) *big.Int {
 	id := node.Identifier
 	two := big.NewInt(2)
 	//exponent := big.NewInt(int64(len(node.FingerTable)) - 1) // fingerentry -1?
-	exponent := big.NewInt(int64(fingerTableSize) - 1)
+	exponent := big.NewInt(int64(fingerentry - 1))
 	//2^(k-1)
 	two.Exp(two, exponent, nil)
 	// n + 2^(k-1)
@@ -299,6 +299,7 @@ func (node *Node) fingerEntry(fingerentry int) *big.Int {
 
 // refreshes finger table entries, next stores the index of the next finger to fix
 func (node *Node) fixFingers() error {
+	//Todo: search paper check node.next 在到了m的时候是不是要从1开始还是0，以及初始化
 	fmt.Println("*************** Invoke findSuccessor function ***************")
 	for {
 		node.next = node.next + 1
