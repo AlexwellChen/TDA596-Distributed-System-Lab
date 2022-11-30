@@ -1,4 +1,4 @@
-package Lab2
+package main
 
 import (
 	"crypto/rand"
@@ -11,7 +11,6 @@ import (
 	"net"
 	"net/rpc"
 	"regexp"
-	"time"
 )
 
 /*------------------------------------------------------------*/
@@ -474,39 +473,39 @@ func find(id *big.Int, startNode NodeAddress) NodeAddress {
 
 type Arguments struct {
 	// Read command line arguments
-	Address     NodeAddress   // Current node address
-	Port        int           // Current node port
-	JoinAddress NodeAddress   // Joining node address
-	JoinPort    int           // Joining node port
-	Stabilize   time.Duration // The time in milliseconds between invocations of stabilize.
-	FixFingers  time.Duration // The time in milliseconds between invocations of fix_fingers.
-	CheckPred   time.Duration // The time in milliseconds between invocations of check_predecessor.
+	Address     NodeAddress // Current node address
+	Port        int         // Current node port
+	JoinAddress NodeAddress // Joining node address
+	JoinPort    int         // Joining node port
+	Stabilize   int         // The time in milliseconds between invocations of stabilize.
+	FixFingers  int         // The time in milliseconds between invocations of fix_fingers.
+	CheckPred   int         // The time in milliseconds between invocations of check_predecessor.
 	Successors  int
 	ClientName  string
 }
 
 func getCmdArgs() Arguments {
 	// Read command line arguments
-	var a string          // Current node address
-	var p int             // Current node port
-	var ja string         // Joining node address
-	var jp int            // Joining node port
-	var ts time.Duration  // The time in milliseconds between invocations of stabilize.
-	var ttf time.Duration // The time in milliseconds between invocations of fix_fingers.
-	var tcp time.Duration // The time in milliseconds between invocations of check_predecessor.
-	var r int             // The number of successors to maintain.
-	var i string          // Client name
+	var a string  // Current node address
+	var p int     // Current node port
+	var ja string // Joining node address
+	var jp int    // Joining node port
+	var ts int    // The time in milliseconds between invocations of stabilize.
+	var tff int   // The time in milliseconds between invocations of fix_fingers.
+	var tcp int   // The time in milliseconds between invocations of check_predecessor.
+	var r int     // The number of successors to maintain.
+	var i string  // Client name
 
 	// Parse command line arguments
 	flag.StringVar(&a, "a", "localhost", "Current node address")
 	flag.IntVar(&p, "p", 8000, "Current node port")
 	flag.StringVar(&ja, "ja", "Unspecified", "Joining node address")
 	flag.IntVar(&jp, "jp", 8000, "Joining node port")
-	flag.DurationVar(&ts, "ts", 1000, "The time in milliseconds between invocations of stabilize.")
-	flag.DurationVar(&ttf, "ttf", 1000, "The time in milliseconds between invocations of fix_fingers.")
-	flag.DurationVar(&tcp, "tcp", 1000, "The time in milliseconds between invocations of check_predecessor.")
-	flag.IntVar(&r, "r", 4, "The number of successors to maintain.")
-	flag.StringVar(&i, "i", "Default", "Client ID")
+	flag.IntVar(&ts, "ts", 1000, "The time in milliseconds between invocations of stabilize.")
+	flag.IntVar(&tff, "tff", 1000, "The time in milliseconds between invocations of fix_fingers.")
+	flag.IntVar(&tcp, "tcp", 1000, "The time in milliseconds between invocations of check_predecessor.")
+	flag.IntVar(&r, "r", 3, "The number of successors to maintain.")
+	flag.StringVar(&i, "i", "Default", "Client Name")
 	flag.Parse()
 
 	// Return command line arguments
@@ -516,7 +515,7 @@ func getCmdArgs() Arguments {
 		JoinAddress: NodeAddress(ja),
 		JoinPort:    jp,
 		Stabilize:   ts,
-		FixFingers:  ttf,
+		FixFingers:  tff,
 		CheckPred:   tcp,
 		Successors:  r,
 		ClientName:  i,
@@ -557,7 +556,7 @@ func CheckArgsValid(args Arguments) int {
 
 	// Check if client ID is s a valid string matching the regular expression [0-9a-fA-F]{40}
 	if args.ClientName != "Default" {
-		matched, err := regexp.MatchString("[0-9a-fA-F]{40}", args.ClientName)
+		matched, err := regexp.MatchString("[0-9a-fA-F]*", args.ClientName)
 		if err != nil || !matched {
 			fmt.Println("Client ID is invalid")
 			return -1
