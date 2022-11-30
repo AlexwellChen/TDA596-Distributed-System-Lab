@@ -1,4 +1,4 @@
-package Lab2
+package main
 
 import (
 	"crypto/rand"

@@ -1,3 +1,3 @@
-module Lab2
+module main
 
 go 1.19
