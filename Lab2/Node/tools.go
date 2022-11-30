@@ -90,6 +90,7 @@ func NewNode(args Arguments) *Node {
 		node.Name = args.ClientName
 	}
 	node.Identifier = strHash(string(node.Name))
+	node.Identifier.Mod(node.Identifier, hashMod)
 	node.FingerTable = make([]fingerEntry, fingerTableSize)
 	node.next = 0
 	node.Predecessor = ""
