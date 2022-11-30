@@ -1,4 +1,4 @@
-package Lab2
+package main
 
 import (
 	"bufio"
@@ -33,6 +33,16 @@ func (se *ScheduledExecutor) Start(task func()) {
 	}()
 }
 
+func HandleConnection(listener *net.TCPListener, node *Node) {
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			fmt.Println("Accept failed:", err.Error())
+			continue
+		}
+		rpc.ServeConn(conn)
+	}
+}
 func main() {
 	// Parse command line arguments
 	Arguments := getCmdArgs()
@@ -70,21 +80,15 @@ func main() {
 				fmt.Println("ListenTCP failed:", err.Error())
 				os.Exit(1)
 			}
-			// Accept connection
-			for {
-				conn, err := listener.Accept()
-				if err != nil {
-					fmt.Println("Accept failed:", err.Error())
-					continue
-				}
-				rpc.ServeConn(conn)
-			}
+			fmt.Println("Created chord ring on ", IPAddr)
+			// Use a separate goroutine to accept connection
+			go HandleConnection(listener, node)
 		}
 
 		// Start periodic tasks
 		se := ScheduledExecutor{delay: Arguments.Stabilize * time.Millisecond, quit: make(chan int)}
 		se.Start(func() {
-			node.stabilize()
+			// node.stabilize()
 		})
 		// TODO: Check if this usage of starting periodic task is correct, do similar things for other periodic tasks
 
@@ -112,6 +116,8 @@ func main() {
 				// node.storeFile(fileName)
 			} else if command == "QUIT" || command == "Q" {
 				// Quit the program
+				// Assign a value to quit channel to stop periodic tasks
+				se.quit <- 1
 				os.Exit(0)
 			} else {
 				fmt.Println("Invalid command")
