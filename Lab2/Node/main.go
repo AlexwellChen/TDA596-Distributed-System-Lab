@@ -48,21 +48,11 @@ func main() {
 		node := NewNode(Arguments)
 		if valid == 0 {
 			// Join exsiting chord
-			node.joinChord()
+
 			RemoteAddr := fmt.Sprintf("%s:%d", Arguments.JoinAddress, Arguments.JoinPort)
 			// Connect to the remote node
 			// TODO: Use ChordCall function instead
-			client, err := rpc.Dial("tcp", RemoteAddr)
-			if err != nil {
-				fmt.Println("Fatal error: ", err)
-				os.Exit(1)
-			}
-			var reply int
-			err = client.Call("NodeRPC.Join", node, &reply)
-			if err != nil {
-				fmt.Println("Fatal error: ", err)
-				os.Exit(1)
-			}
+			node.joinChord(NodeAddress(RemoteAddr))
 			fmt.Println("Join RPC call success")
 		} else if valid == 1 {
 			// Create new chord
@@ -110,14 +100,16 @@ func main() {
 				fmt.Println("Please enter the key you want to lookup")
 				key, _ := reader.ReadString('\n')
 				key = strings.TrimSpace(key)
+				fmt.Println(key)
 				// TODO: Implement lookup function
-				node.lookUp(key)
+				// node.lookUp(key)
 			} else if command == "STOREFILE" || command == "S" {
 				fmt.Println("Please enter the file name you want to store")
 				fileName, _ := reader.ReadString('\n')
 				fileName = strings.TrimSpace(fileName)
+				fmt.Println(fileName)
 				// TODO: Implement store file function
-				node.storeFile(fileName)
+				// node.storeFile(fileName)
 			} else if command == "QUIT" || command == "Q" {
 				// Quit the program
 				os.Exit(0)

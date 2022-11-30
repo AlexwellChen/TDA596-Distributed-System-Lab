@@ -119,7 +119,7 @@ func (node *Node) initSuccessors() {
 	// Initialize successors
 	successorsSize := len(node.Successors)
 	for i := 0; i < successorsSize; i++ {
-		node.Successors[i] = node.Address
+		node.Successors[i] = ""
 	}
 }
 
@@ -149,7 +149,28 @@ func (node *Node) joinChord(joinNode NodeAddress) {
 	}
 
 	// Notify the successor[0] that we are its predecessor
+	reply := false
+	err := ChordCall(node.Successors[0], "Node.SetPredecessorRPC", node.Address, &reply)
+	if err != nil {
+		fmt.Println("Error: ", err)
+	}
+	if reply {
+		fmt.Println("Set predecessor success")
+	} else {
+		fmt.Println("Set predecessor failed")
+	}
+}
 
+func (node *Node) setPredecessor(predecessorAddress NodeAddress) *bool {
+	node.Predecessor = predecessorAddress
+	flag := true
+	return &flag
+}
+
+func (node *Node) SetPredecessorRPC(predecessorAddress NodeAddress, reply *bool) error {
+	fmt.Println("-------------- Invoke SetPredecessorRPC function ------------")
+	reply = node.setPredecessor(predecessorAddress)
+	return nil
 }
 
 func (node *Node) createChord() {
@@ -197,8 +218,14 @@ func (node *Node) printState() {
 * @param:		reply: the reply to be received
 * @return:		error: the error returned by the RPC call
  */
+/*
+type RPCServive interface{
+
+	node.FindSuccessorRPC(requestID *big.Int, reply *FindSuccessorRPCReply) error
+}
+*/
 func ChordCall(targetNode NodeAddress, method string, request interface{}, reply interface{}) error {
-	client, err := rpc.DialHTTP("tcp", string(targetNode))
+	client, err := rpc.Dial("tcp", string(targetNode))
 	if err != nil {
 		return err
 	}
@@ -281,7 +308,7 @@ func (node *Node) checkPredecessor() error {
 	pred := node.Predecessor
 	if pred != "" {
 		//check connection
-		client, err := rpc.DialHTTP("tcp", string(pred))
+		client, err := rpc.Dial("tcp", string(pred))
 		//if connection failed, set predecessor to nil
 		if err != nil {
 			fmt.Printf("Predecessor %s has failed", string(pred))
@@ -379,7 +406,7 @@ type FindSuccessorRPCReply struct {
 }
 
 /*
-* @description: RPC method Packaging for FindSuccessor, running on remote node
+* @description: RPC method Packaging for findSuccessor, running on remote node
 * @param: 		requestID: the client address or file name to be searched
 * @return: 		found: whether the key is found
 * 				successor: the successor of the key
@@ -413,12 +440,13 @@ func (node *Node) closePrecedingNode(requestID *big.Int) NodeAddress {
 }
 
 // Local use function
+// Lookup
 func find(id *big.Int, startNode NodeAddress) NodeAddress {
 	fmt.Println("****************** Invoke find function *********************")
 	found := false
 	nextNode := startNode
 	i := 0
-	maxSteps := 10
+	maxSteps := 10 // 2^maxSteps
 	for !found && i < maxSteps {
 		// found, nextNode = nextNode.FindSuccessor(id)
 		result := FindSuccessorRPCReply{}
