@@ -94,7 +94,7 @@ func main() {
 		// Start periodic tasks
 		se := ScheduledExecutor{delay: Arguments.Stabilize * time.Millisecond, quit: make(chan int)}
 		se.Start(func() {
-			node.Stabilize()
+			node.stabilize()
 		})
 		// TODO: Check if this usage of starting periodic task is correct, do similar things for other periodic tasks
 

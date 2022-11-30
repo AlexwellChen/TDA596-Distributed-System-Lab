@@ -123,18 +123,33 @@ func (node *Node) initSuccessors() {
 	}
 }
 
-func (node *Node) joinChord() {
+func (node *Node) joinChord(joinNode NodeAddress) {
 	// Todo: Join the Chord ring
 	// Find the successor of the node's identifier
-	// Set the node's predecessor to nil and successors to the successor
+	// Set the node's predecessor to nil and successors to the exits node
+	// joinNode is the successor of current node, which is node.Successors[0]
+	// current node will be the predecessor of joinNode
 	node.Predecessor = ""
-	flag, successor := node.findSuccessor(node.Identifier)
-	if flag {
-		for i := 0; i < len(successor); i++ {
-			// TODO: find successor should return a list of successors (size of -r)
-			node.Successors[i] = successor[i]
+	node.Successors[0] = joinNode
+
+	// Fine other successors, use FindSuccessor RPC
+	for i := 1; i < len(node.Successors); i++ {
+		var reply FindSuccessorRPCReply
+		err := ChordCall(node.Successors[i-1], "Node.FindSuccessorRPC", node.Identifier, &reply)
+		if err != nil {
+			fmt.Println("Error: ", err)
+			break
+		}
+		if reply.found {
+			node.Successors[i] = reply.SuccessorAddress
+		} else {
+			fmt.Println("Find ", i, "th successor failed")
+			break
 		}
 	}
+
+	// Notify the successor[0] that we are its predecessor
+
 }
 
 func (node *Node) createChord() {
