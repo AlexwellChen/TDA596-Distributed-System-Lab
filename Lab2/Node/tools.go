@@ -1,4 +1,4 @@
-package Lab2
+package main
 
 import (
 	"crypto/rand"
@@ -83,9 +83,9 @@ func (node *Node) generateRSAKey(bits int) {
 func NewNode(args Arguments) *Node {
 	// Create a new node
 	node := &Node{}
-	node.Address = args.Address
+	node.Address = NodeAddress(fmt.Sprintf("%s:%d", args.Address, args.Port))
 	if args.ClientName == "Default" {
-		node.Name = string(args.Address)
+		node.Name = string(node.Address)
 	} else {
 		node.Name = args.ClientName
 	}
@@ -525,7 +525,7 @@ func getCmdArgs() Arguments {
 	flag.DurationVar(&ttf, "ttf", 1000, "The time in milliseconds between invocations of fix_fingers.")
 	flag.DurationVar(&tcp, "tcp", 1000, "The time in milliseconds between invocations of check_predecessor.")
 	flag.IntVar(&r, "r", 3, "The number of successors to maintain.")
-	flag.StringVar(&i, "i", "Default", "Client ID")
+	flag.StringVar(&i, "i", "Default", "Client Name")
 	flag.Parse()
 
 	// Return command line arguments
@@ -574,11 +574,11 @@ func CheckArgsValid(args Arguments) int {
 		return -1
 	}
 
-	// Check if client ID is s a valid string matching the regular expression [0-9a-fA-F]{40}
+	// Check if client name is s a valid string matching the regular expression [0-9a-fA-F]{40}
 	if args.ClientName != "Default" {
 		matched, err := regexp.MatchString("[0-9a-fA-F]{40}", args.ClientName)
 		if err != nil || !matched {
-			fmt.Println("Client ID is invalid")
+			fmt.Println("Client Name is invalid")
 			return -1
 		}
 	}
