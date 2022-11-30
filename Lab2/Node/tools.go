@@ -247,10 +247,14 @@ func ChordCall(targetNode NodeAddress, method string, request interface{}, reply
 --------------------------------------------------------------
 */
 // get node's predecessor
-func (node *Node) GetPredecessor(none *struct{}, predecessor *NodeAddress) error {
-	fmt.Println("-------------- Invoke GetPredecessor function --------------")
-	*predecessor = node.Predecessor
-	if node.Predecessor == "" {
+func (node *Node) getPredecessor() *NodeAddress {
+	fmt.Println("************** Invoke getPredecessor function ***************")
+	return &node.Predecessor
+}
+func (node *Node) GetPredecessorRPC(none *struct{}, predecessor *NodeAddress) error {
+	fmt.Println("------------- Invoke GetPredecessorRPC function -------------")
+	*predecessor = *node.getPredecessor()
+	if *predecessor == "" {
 		return errors.New("predecessor is empty")
 	} else {
 		return nil
@@ -258,9 +262,14 @@ func (node *Node) GetPredecessor(none *struct{}, predecessor *NodeAddress) error
 }
 
 // get node's successorList
-func (node *Node) GetSuccessorList(none *struct{}, successorList *[]NodeAddress) error {
-	fmt.Println("-------------- Invoke GetSuccessorList function -------------")
-	*successorList = node.Successors[:]
+func (node *Node) getSuccessorList() *[]NodeAddress {
+	fmt.Println("************* Invoke getSuccessorList function **************")
+	return &node.Successors
+}
+
+func (node *Node) GetSuccessorListRPC(none *struct{}, successorList *[]NodeAddress) error {
+	fmt.Println("------------ Invoke GetSuccessorListRPC function ------------")
+	*successorList = *node.getSuccessorList()
 	return nil
 }
 
@@ -270,7 +279,7 @@ func (node *Node) stabilize() error {
 	//Todo: search paper 看看是不是要fix successorList
 	fmt.Println("***************** Invoke stabilize function *****************")
 	var successors []NodeAddress
-	err := ChordCall(node.Successors[0], "Node.GetSuccessorList", struct{}{}, &successors)
+	err := ChordCall(node.Successors[0], "Node.GetSuccessorListRPC", struct{}{}, &successors)
 	if err == nil {
 		for i := 0; i < len(successors); i++ {
 			node.Successors[i+1] = successors[i]
@@ -291,7 +300,7 @@ func (node *Node) stabilize() error {
 		}
 	}
 	var predecessor NodeAddress = ""
-	err = ChordCall(node.Successors[0], "Node.GetPredecessor", struct{}{}, &predecessor)
+	err = ChordCall(node.Successors[0], "Node.GetPredecessorRPC", struct{}{}, &predecessor)
 	if err == nil {
 		if predecessor != "" && between(strHash(string(node.Name)),
 			strHash(string(predecessor)), strHash(string(node.Successors[0])), false) {
@@ -299,7 +308,7 @@ func (node *Node) stabilize() error {
 		}
 	}
 
-	err = ChordCall(node.Successors[0], "Node.Notify", node.Address, &struct{}{})
+	err = ChordCall(node.Successors[0], "Node.NotifyRPC", node.Address, &struct{}{})
 	if err != nil {
 		fmt.Println("Notify failed")
 	}
@@ -326,8 +335,8 @@ func (node *Node) checkPredecessor() error {
 }
 
 // 'address' thinks it might be our predecessor
-func (node *Node) Notify(address NodeAddress) error {
-	fmt.Println("------------------- Invoke Notify function ------------------")
+func (node *Node) notify(address NodeAddress) *bool {
+	fmt.Println("***************** Invoke notify function ********************")
 	//if (predecessor is nil or n' ∈ (predecessor, n))
 	if node.Predecessor == "" ||
 		between(strHash(string(node.Predecessor)),
@@ -335,6 +344,13 @@ func (node *Node) Notify(address NodeAddress) error {
 		//predecessor = n'
 		node.Predecessor = address
 	}
+	flag := true
+	return &flag
+}
+//TODO: check if the notifyrpc function is correct
+func (node *Node) NotifyRPC(address *NodeAddress, reply *bool) error {
+	fmt.Println("---------------- Invoke NotifyRPC function ------------------")
+	*reply = *node.notify(*address)
 	return nil
 }
 
