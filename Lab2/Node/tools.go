@@ -84,8 +84,12 @@ func NewNode(args Arguments) *Node {
 	// Create a new node
 	node := &Node{}
 	node.Address = args.Address
-	node.Name = args.ClientName
-	node.Identifier = strHash(string(node.Address))
+	if args.ClientName == "Default" {
+		node.Name = string(args.Address)
+	} else {
+		node.Name = args.ClientName
+	}
+	node.Identifier = strHash(string(node.Name))
 	node.FingerTable = make([]fingerEntry, fingerTableSize)
 	node.next = 0
 	node.Predecessor = ""
@@ -190,7 +194,7 @@ func (node *Node) printState() {
 	fmt.Println("-------------- Current Node State ------------")
 	fmt.Println("Node Name: ", node.Name)
 	fmt.Println("Node Address: ", node.Address)
-	fmt.Println("Node Identifier: ", node.Identifier)
+	fmt.Println("Node Identifier: ", new(big.Int).SetBytes(node.Identifier.Bytes()))
 	fmt.Println("Node Predecessor: ", node.Predecessor)
 	fmt.Println("Node Successors: ")
 	for i := 0; i < len(node.Successors); i++ {
@@ -288,7 +292,7 @@ func (node *Node) stabilize() error {
 	var predecessor NodeAddress = ""
 	err = ChordCall(node.Successors[0], "Node.GetPredecessor", struct{}{}, &predecessor)
 	if err == nil {
-		if predecessor != "" && between(strHash(string(node.Address)),
+		if predecessor != "" && between(strHash(string(node.Name)),
 			strHash(string(predecessor)), strHash(string(node.Successors[0])), false) {
 			node.Successors[0] = predecessor
 		}
@@ -326,7 +330,7 @@ func (node *Node) Notify(address NodeAddress) error {
 	//if (predecessor is nil or n' ∈ (predecessor, n))
 	if node.Predecessor == "" ||
 		between(strHash(string(node.Predecessor)),
-			strHash(string(address)), strHash(string(node.Address)), false) {
+			strHash(string(address)), strHash(string(node.Name)), false) {
 		//predecessor = n'
 		node.Predecessor = address
 	}
@@ -385,7 +389,7 @@ func (node *Node) fixFingers() error {
 				return nil
 			}
 
-			if between(strHash(string(node.Address)), id, strHash(string(addr)), false) && addr != "" {
+			if between(strHash(string(node.Name)), id, strHash(string(addr)), false) && addr != "" {
 				node.FingerTable[node.next].Id = id.Bytes()
 				node.FingerTable[node.next].Address = NodeAddress(addr)
 			} else {
@@ -399,6 +403,17 @@ func (node *Node) fixFingers() error {
 /*------------------------------------------------------------*/
 /*                  Routing Functions By: Alexwell            */
 /*------------------------------------------------------------*/
+
+// Get target node name/id
+
+func (node *Node) getName() string {
+	return node.Name
+}
+
+func (node *Node) GetNameRPC(fakeRequest string, reply *string) error {
+	*reply = node.getName()
+	return nil
+}
 
 type FindSuccessorRPCReply struct {
 	found            bool
@@ -420,7 +435,9 @@ func (node *Node) FindSuccessorRPC(requestID *big.Int, reply *FindSuccessorRPCRe
 // Local use function
 func (node *Node) findSuccessor(requestID *big.Int) (bool, NodeAddress) {
 	fmt.Println("*************** Invoke findSuccessor function ***************")
-	if between(node.Identifier, requestID, strHash(string(node.Successors[0])), true) {
+	successorName := ""
+	ChordCall(node.Successors[0], "Node.GetNameRPC", "", &successorName)
+	if between(node.Identifier, requestID, strHash(string(successorName)), true) {
 		return true, node.Successors[0]
 	} else {
 		return false, node.closePrecedingNode(requestID)
@@ -432,7 +449,9 @@ func (node *Node) closePrecedingNode(requestID *big.Int) NodeAddress {
 	fmt.Println("************ Invoke closePrecedingNode function ************")
 	fingerTableSize := len(node.FingerTable)
 	for i := fingerTableSize - 1; i >= 1; i-- {
-		if between(node.Identifier, strHash(string(node.FingerTable[i].Address)), requestID, true) {
+		entryName := ""
+		ChordCall(node.FingerTable[i].Address, "Node.GetNameRPC", "", &entryName)
+		if between(node.Identifier, strHash(string(entryName)), requestID, true) {
 			return node.FingerTable[i].Address
 		}
 	}
@@ -505,7 +524,7 @@ func getCmdArgs() Arguments {
 	flag.DurationVar(&ts, "ts", 1000, "The time in milliseconds between invocations of stabilize.")
 	flag.DurationVar(&ttf, "ttf", 1000, "The time in milliseconds between invocations of fix_fingers.")
 	flag.DurationVar(&tcp, "tcp", 1000, "The time in milliseconds between invocations of check_predecessor.")
-	flag.IntVar(&r, "r", 4, "The number of successors to maintain.")
+	flag.IntVar(&r, "r", 3, "The number of successors to maintain.")
 	flag.StringVar(&i, "i", "Default", "Client ID")
 	flag.Parse()
 
