@@ -219,8 +219,8 @@ func (node *Node) notify(address NodeAddress) (bool, error) {
 		addressId.Mod(addressId, hashMod)
 
 		nodeId := node.Identifier
-		fmt.Println("predcessorId: ", predcessorId, "nodeId: ", nodeId, "addressId: ", addressId)
-		if between(predcessorId, nodeId, addressId, false) {
+		fmt.Println("predcessorId: ", predcessorId, "addressId: ", addressId, "nodeId: ", nodeId)
+		if between(predcessorId, addressId, nodeId, false) {
 			//predecessor = n'
 			node.Predecessor = address
 			fmt.Println(node.Name, "'s Predecessor is set to", address)
