@@ -150,17 +150,21 @@ func (node *Node) joinChord(joinNode NodeAddress) error {
 	return nil
 }
 
-func (node *Node) setPredecessor(predecessorAddress NodeAddress) *bool {
+type SetPredecessorRPCReply struct {
+	Success bool
+}
+
+func (node *Node) setPredecessor(predecessorAddress NodeAddress) bool {
 	node.Predecessor = predecessorAddress
 	flag := true
-	return &flag
+	return flag
 }
 
 // TODO: warning here:argument reply is overwritten before first use
-func (node *Node) SetPredecessorRPC(predecessorAddress NodeAddress, reply *bool) error {
+func (node *Node) SetPredecessorRPC(predecessorAddress NodeAddress, reply *SetPredecessorRPCReply) error {
 	fmt.Println("-------------- Invoke SetPredecessorRPC function ------------")
-	reply = node.setPredecessor(predecessorAddress)
-	if *reply {
+	reply.Success = node.setPredecessor(predecessorAddress)
+	if reply.Success {
 		fmt.Println("Set predecessor success")
 	} else {
 		fmt.Println("Set predecessor failed")
@@ -233,7 +237,7 @@ func ChordCall(targetNode NodeAddress, method string, request interface{}, reply
 	defer client.Close()
 	err = client.Call(method, request, &reply)
 	if err != nil {
-		fmt.Println("Call Error: ", err)
+		fmt.Println("Call Error:", err)
 		return err
 	}
 	return nil
@@ -246,19 +250,28 @@ func ChordCall(targetNode NodeAddress, method string, request interface{}, reply
 
 --------------------------------------------------------------
 */
+
+type GetPredecessorRPCRepy struct {
+	PredecessorAddress NodeAddress
+}
+
 // get node's predecessor
 func (node *Node) getPredecessor() NodeAddress {
 	fmt.Println("************** Invoke getPredecessor function ***************")
 	return node.Predecessor
 }
-func (node *Node) GetPredecessorRPC(none *struct{}, predecessor *NodeAddress) error {
+func (node *Node) GetPredecessorRPC(none *struct{}, reply *GetPredecessorRPCRepy) error {
 	fmt.Println("------------- Invoke GetPredecessorRPC function -------------")
-	*predecessor = node.getPredecessor()
-	if *predecessor == "" {
+	reply.PredecessorAddress = node.getPredecessor()
+	if reply.PredecessorAddress == "" {
 		return errors.New("predecessor is empty")
 	} else {
 		return nil
 	}
+}
+
+type GetSuccessorListRPCReply struct {
+	SuccessorList []NodeAddress
 }
 
 // get node's successorList
@@ -267,9 +280,9 @@ func (node *Node) getSuccessorList() []NodeAddress {
 	return node.Successors[:]
 }
 
-func (node *Node) GetSuccessorListRPC(none *struct{}, successorList *[]NodeAddress) error {
+func (node *Node) GetSuccessorListRPC(none *struct{}, reply *GetSuccessorListRPCReply) error {
 	fmt.Println("------------ Invoke GetSuccessorListRPC function ------------")
-	*successorList = node.getSuccessorList()
+	reply.SuccessorList = node.getSuccessorList()
 	return nil
 }
 
@@ -281,8 +294,9 @@ func (node *Node) stabilize() error {
 	//??(measuring it against the maximum length discussed above).
 	fmt.Println("***************** Invoke stabilize function *****************")
 	//node.Successors[0] = node.getSuccessor()
-	var successors []NodeAddress
-	err := ChordCall(node.Successors[0], "Node.GetSuccessorListRPC", struct{}{}, &successors)
+	var getSuccessorListRPCReply GetSuccessorListRPCReply
+	err := ChordCall(node.Successors[0], "Node.GetSuccessorListRPC", struct{}{}, &getSuccessorListRPCReply)
+	successors := getSuccessorListRPCReply.SuccessorList
 	if err == nil {
 		for i := 0; i < len(successors)-1; i++ {
 			node.Successors[i+1] = successors[i]
@@ -307,8 +321,8 @@ func (node *Node) stabilize() error {
 			}
 		}
 	}
-	var predecessor NodeAddress = ""
-	err = ChordCall(node.Successors[0], "Node.GetPredecessorRPC", struct{}{}, &predecessor)
+	var getPredecessorRPCRepy GetPredecessorRPCRepy
+	err = ChordCall(node.Successors[0], "Node.GetPredecessorRPC", struct{}{}, &getPredecessorRPCRepy)
 	if err == nil {
 		successorName := ""
 		err = ChordCall(node.Successors[0], "Node.GetNameRPC", "", &successorName)
@@ -316,18 +330,21 @@ func (node *Node) stabilize() error {
 			fmt.Println("Get successor[0] name failed")
 			return err
 		}
-		predecessorName := ""
-		err = ChordCall(predecessor, "Node.GetNameRPC", "", &predecessorName)
+		predecessorAddr := getPredecessorRPCRepy.PredecessorAddress
+		var getNameReply GetNameRPCReply
+		err = ChordCall(predecessorAddr, "Node.GetNameRPC", "", &getNameReply)
 		if err != nil {
 			fmt.Println("Get predecessor name failed")
 			return err
 		}
-		if predecessor != "" && between(strHash(string(node.Name)),
+		predecessorName := getNameReply.Name
+		if predecessorAddr != "" && between(strHash(string(node.Name)),
 			strHash(string(predecessorName)), strHash(string(successorName)), false) {
-			node.Successors[0] = predecessor
+			node.Successors[0] = predecessorAddr
 		}
 	}
-	err = ChordCall(node.Successors[0], "Node.NotifyRPC", node.Address, &struct{}{})
+	var fakeReply NotifyRPCReply
+	err = ChordCall(node.Successors[0], "Node.NotifyRPC", node.Address, &fakeReply)
 	if err != nil {
 		fmt.Println("Notify failed")
 	}
@@ -379,10 +396,14 @@ func (node *Node) notify(address NodeAddress) *bool {
 	return &flag
 }
 
+type NotifyRPCReply struct {
+	Success bool
+}
+
 // TODO: check if the notifyrpc function is correct
-func (node *Node) NotifyRPC(address *NodeAddress, reply *bool) error {
+func (node *Node) NotifyRPC(address *NodeAddress, reply *NotifyRPCReply) error {
 	fmt.Println("---------------- Invoke NotifyRPC function ------------------")
-	*reply = *node.notify(*address)
+	reply.Success = *node.notify(*address)
 	return nil
 }
 
@@ -442,13 +463,13 @@ func (node *Node) fixFingers() error {
 			return nil
 		}
 		id := node.fingerEntry(node.next)
-		successorName := ""
-		err := ChordCall(result.SuccessorAddress, "Node.GetNameRPC", "", &successorName)
+		var getNameRPCReply GetNameRPCReply
+		err := ChordCall(result.SuccessorAddress, "Node.GetNameRPC", "", &getNameRPCReply)
 		if err != nil {
 			fmt.Println("Get successor name failed")
 			return err
 		}
-		if between(strHash(string(node.Name)), id, strHash(string(successorName)), false) && result.SuccessorAddress != "" {
+		if between(strHash(string(node.Name)), id, strHash(string(getNameRPCReply.Name)), false) && result.SuccessorAddress != "" {
 			node.FingerTable[node.next].Id = id.Bytes()
 			node.FingerTable[node.next].Address = result.SuccessorAddress
 		} else {
@@ -461,6 +482,9 @@ func (node *Node) fixFingers() error {
 /*------------------------------------------------------------*/
 /*                  Routing Functions By: Alexwell            */
 /*------------------------------------------------------------*/
+type GetNameRPCReply struct {
+	Name string
+}
 
 // Get target node name/id
 
@@ -473,8 +497,8 @@ func (node *Node) getName() string {
 * @param: 		fakeRequest: not used
 * @return: 		reply: the name of the node, use for hash(name) to get the node id
  */
-func (node *Node) GetNameRPC(fakeRequest string, reply *string) error {
-	*reply = node.getName()
+func (node *Node) GetNameRPC(fakeRequest string, reply *GetNameRPCReply) error {
+	reply.Name = node.getName()
 	return nil
 }
 
@@ -515,9 +539,9 @@ func (node *Node) closePrecedingNode(requestID *big.Int) NodeAddress {
 	fmt.Println("************ Invoke closePrecedingNode function ************")
 	fingerTableSize := len(node.FingerTable)
 	for i := fingerTableSize - 1; i >= 1; i-- {
-		entryName := ""
-		ChordCall(node.FingerTable[i].Address, "Node.GetNameRPC", "", &entryName)
-		if between(node.Identifier, strHash(string(entryName)), requestID, true) {
+		var reply GetNameRPCReply
+		ChordCall(node.FingerTable[i].Address, "Node.GetNameRPC", "", &reply)
+		if between(node.Identifier, strHash(string(reply.Name)), requestID, true) {
 			return node.FingerTable[i].Address
 		}
 	}
