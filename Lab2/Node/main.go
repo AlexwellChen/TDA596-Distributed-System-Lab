@@ -43,6 +43,7 @@ func HandleConnection(listener *net.TCPListener, node *Node) {
 		rpc.ServeConn(conn)
 	}
 }
+
 func main() {
 	// Parse command line arguments
 	Arguments := getCmdArgs()
@@ -56,6 +57,7 @@ func main() {
 		fmt.Println("Valid command line arguments")
 		// Create new Node
 		node := NewNode(Arguments)
+		rpc.Register(node)
 		if valid == 0 {
 			// Join exsiting chord
 

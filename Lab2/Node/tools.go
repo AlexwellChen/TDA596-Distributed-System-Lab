@@ -138,31 +138,44 @@ func (node *Node) joinChord(joinNode NodeAddress) {
 
 	// Fine other successors, use FindSuccessor RPC
 	for i := 1; i < len(node.Successors); i++ {
-		var reply FindSuccessorRPCReply
-		err := ChordCall(node.Successors[i-1], "Node.FindSuccessorRPC", node.Identifier, &reply)
+		var succesorAddr NodeAddress
+		err := ChordCall(node.Successors[i-1], "Node.GetFirstSuccrssorAddressRPC", "", &succesorAddr)
 		if err != nil {
-			fmt.Println("Error: ", err)
+			fmt.Println("GetFirstSuccrssorAddressRPC Error: ", err)
 			break
 		}
-		if reply.found {
-			node.Successors[i] = reply.SuccessorAddress
-		} else {
-			fmt.Println("Find ", i, "th successor failed")
-			break
-		}
+		node.Successors[i] = succesorAddr
 	}
 
 	// Notify the successor[0] that we are its predecessor
 	reply := false
 	err := ChordCall(node.Successors[0], "Node.SetPredecessorRPC", node.Address, &reply)
 	if err != nil {
-		fmt.Println("Error: ", err)
+		fmt.Println("SetPredecessorRPC Error: ", err)
 	}
 	if reply {
 		fmt.Println("Set predecessor success")
 	} else {
 		fmt.Println("Set predecessor failed")
 	}
+}
+
+func (node *Node) getFirstSuccrssorAddress() *NodeAddress {
+	// Get the first successor address
+	addr := node.Successors[0]
+	if addr == "" {
+		return nil
+	}
+	return &addr
+}
+
+func (node *Node) GetFirstSuccrssorAddressRPC(fakeRequest string, succesorAddr *NodeAddress) error {
+	// Get the first successor address
+	succesorAddr = node.getFirstSuccrssorAddress()
+	if succesorAddr == nil {
+		return errors.New("No successor")
+	}
+	return nil
 }
 
 func (node *Node) setPredecessor(predecessorAddress NodeAddress) *bool {
@@ -467,6 +480,11 @@ func (node *Node) getName() string {
 	return node.Name
 }
 
+/*
+* @description: RPC method Packaging for getName, running on remote node
+* @param: 		fakeRequest: not used
+* @return: 		reply: the name of the node, use for hash(name) to get the node id
+ */
 func (node *Node) GetNameRPC(fakeRequest string, reply *string) error {
 	*reply = node.getName()
 	return nil
