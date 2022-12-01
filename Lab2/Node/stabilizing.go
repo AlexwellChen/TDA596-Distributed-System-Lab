@@ -148,6 +148,14 @@ func (node *Node) fixFingers() error {
 		node.FingerTable[node.next].Id = id.Bytes()
 	} */
 	node.FingerTable[node.next].Address = result.SuccessorAddress
+	// // Get successor's name
+	// var getSuccessorNameRPCReply GetNameRPCReply
+	// err = ChordCall(result.SuccessorAddress, "Node.GetNameRPC", "", &getSuccessorNameRPCReply)
+	// if err != nil {
+	// 	fmt.Println("Get successor name failed")
+	// 	return err
+	// }
+	// fmt.Println("Successor name: ", getSuccessorNameRPCReply.Name)
 	node.FingerTable[node.next].Id = id.Bytes()
 	/* 		_, addr := node.findSuccessor(id)
 	   		if addr != "" && addr != node.FingerTable[node.next].Address {
@@ -162,13 +170,16 @@ func (node *Node) fixFingers() error {
 			return nil
 		}
 		id := node.fingerEntry(node.next)
-		var getNameRPCReply GetNameRPCReply
-		err := ChordCall(result.SuccessorAddress, "Node.GetNameRPC", "", &getNameRPCReply)
+		var getSuccessorNameRPCReply GetNameRPCReply
+		err := ChordCall(result.SuccessorAddress, "Node.GetNameRPC", "", &getSuccessorNameRPCReply)
 		if err != nil {
 			fmt.Println("Get successor name failed")
 			return err
 		}
-		if between(strHash(string(node.Name)), id, strHash(string(getNameRPCReply.Name)), false) && result.SuccessorAddress != "" {
+		successorName := getSuccessorNameRPCReply.Name
+		successorId := strHash(string(successorName))
+		successorId.Mod(successorId, hashMod)
+		if between(node.Identifier, id, successorId, false) && result.SuccessorAddress != "" {
 			node.FingerTable[node.next].Id = id.Bytes()
 			node.FingerTable[node.next].Address = result.SuccessorAddress
 		} else {

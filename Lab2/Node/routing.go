@@ -16,7 +16,9 @@ func (node *Node) closePrecedingNode(requestID *big.Int) NodeAddress {
 	for i := fingerTableSize - 1; i >= 1; i-- {
 		var reply GetNameRPCReply
 		ChordCall(node.FingerTable[i].Address, "Node.GetNameRPC", "", &reply)
-		if between(node.Identifier, strHash(string(reply.Name)), requestID, true) {
+		fingerId := strHash(reply.Name)
+		fingerId.Mod(fingerId, hashMod)
+		if between(node.Identifier, fingerId, requestID, false) {
 			return node.FingerTable[i].Address
 		}
 	}
@@ -69,13 +71,19 @@ func (node *Node) findSuccessor(requestID *big.Int) (bool, NodeAddress) {
 	var getNameRPCReply GetNameRPCReply
 	ChordCall(node.Successors[0], "Node.GetNameRPC", "", &getNameRPCReply)
 	successorName = getNameRPCReply.Name
-	if between(node.Identifier, requestID, strHash(string(successorName)), true) {
+	successorId := strHash(successorName)
+	successorId.Mod(successorId, hashMod)
+	if between(node.Identifier, requestID, successorId, true) {
 		// fmt.Println("Successor is: ", node.Successors[0])
 		return true, node.Successors[0]
 	} else {
 		successorAddr := node.closePrecedingNode(requestID)
 		// fmt.Println("Close Preceding Node is: ", successorAddr)
-		return false, successorAddr
+		// Get the successor of the close preceding node
+		var findSuccessorRPCReply FindSuccessorRPCReply
+		ChordCall(successorAddr, "Node.FindSuccessorRPC", requestID, &findSuccessorRPCReply)
+
+		return false, findSuccessorRPCReply.SuccessorAddress
 	}
 }
 
