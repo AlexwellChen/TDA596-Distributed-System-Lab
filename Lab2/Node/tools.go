@@ -10,6 +10,7 @@ import (
 	"math/big"
 	"net"
 	"net/rpc"
+	"net/rpc/jsonrpc"
 	"regexp"
 )
 
@@ -138,30 +139,14 @@ func (node *Node) joinChord(joinNode NodeAddress) error {
 
 	//  Join node is in charge of looking for the successor of the node's identifier
 	// 1. Call the joinNode's findSuccessor() to find the successor of the node's identifier
-	var successorAddr NodeAddress
-	err := ChordCall(joinNode, "Node.FindSuccessorRPC", node.Identifier, &successorAddr)
-	node.Successors[0] = successorAddr
+	var reply FindSuccessorRPCReply
+	err := ChordCall(joinNode, "Node.FindSuccessorRPC", node.Identifier, &reply)
+	fmt.Println("Successor: ", reply.SuccessorAddress)
+	node.Successors[0] = reply.SuccessorAddress
 	if err != nil {
 		return err
 	}
-	return nil
-}
 
-func (node *Node) getFirstSuccrssorAddress() *NodeAddress {
-	// Get the first successor address
-	addr := node.Successors[0]
-	if addr == "" {
-		return nil
-	}
-	return &addr
-}
-
-func (node *Node) GetFirstSuccrssorAddressRPC(fakeRequest string, succesorAddr *NodeAddress) error {
-	// Get the first successor address
-	succesorAddr = node.getFirstSuccrssorAddress()
-	if succesorAddr == nil {
-		return errors.New("no successor")
-	}
 	return nil
 }
 
@@ -239,7 +224,8 @@ type RPCServive interface{
 }
 */
 func ChordCall(targetNode NodeAddress, method string, request interface{}, reply interface{}) error {
-	client, err := rpc.DialHTTP("tcp", string(targetNode))
+	fmt.Println("Dial to ", targetNode)
+	client, err := jsonrpc.Dial("tcp", string(targetNode))
 	if err != nil {
 		fmt.Println("Dial Error: ", err)
 		return err
@@ -504,7 +490,7 @@ type FindSuccessorRPCReply struct {
 * 				successor: the successor of the key
  */
 func (node *Node) FindSuccessorRPC(requestID *big.Int, reply *FindSuccessorRPCReply) error {
-	fmt.Println("-------------- Invoke FindSuccessor_RPC function ------------")
+	fmt.Println("-------------- Invoke FindSuccessorRPC function ------------")
 	reply.found, reply.SuccessorAddress = node.findSuccessor(requestID)
 	return nil
 }
@@ -515,9 +501,12 @@ func (node *Node) findSuccessor(requestID *big.Int) (bool, NodeAddress) {
 	successorName := ""
 	ChordCall(node.Successors[0], "Node.GetNameRPC", "", &successorName)
 	if between(node.Identifier, requestID, strHash(string(successorName)), true) {
+		fmt.Println("Successor is: ", node.Successors[0])
 		return true, node.Successors[0]
 	} else {
-		return false, node.closePrecedingNode(requestID)
+		successorAddr := node.closePrecedingNode(requestID)
+		fmt.Println("Successor is: ", successorAddr)
+		return false, successorAddr
 	}
 }
 
