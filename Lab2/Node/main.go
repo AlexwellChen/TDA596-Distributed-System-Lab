@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net"
 	"net/rpc"
-	"net/rpc/jsonrpc"
 	"os"
 	"strings"
 	"time"
@@ -40,8 +39,10 @@ func HandleConnection(listener *net.TCPListener, node *Node) {
 		if err != nil {
 			fmt.Println("Accept failed:", err.Error())
 			continue
+		} else {
+			fmt.Println("Accept success")
 		}
-		jsonrpc.ServeConn(conn)
+		go rpc.ServeConn(conn)
 	}
 }
 
@@ -64,9 +65,14 @@ func main() {
 
 			RemoteAddr := fmt.Sprintf("%s:%d", Arguments.JoinAddress, Arguments.JoinPort)
 			// Connect to the remote node
-			// TODO: Use ChordCall function instead
-			node.joinChord(NodeAddress(RemoteAddr))
-			fmt.Println("Join RPC call success")
+			fmt.Println("Connecting to the remote node..." + RemoteAddr)
+			err := node.joinChord(NodeAddress(RemoteAddr))
+			if err != nil {
+				fmt.Println("Join RPC call failed")
+				os.Exit(1)
+			} else {
+				fmt.Println("Join RPC call success")
+			}
 		} else if valid == 1 {
 			// Create new chord
 			node.createChord()
@@ -83,17 +89,26 @@ func main() {
 				fmt.Println("ListenTCP failed:", err.Error())
 				os.Exit(1)
 			}
-			fmt.Println("Created chord ring on ", IPAddr)
+			fmt.Println("Created chord ring on ", tcpAddr)
 			// Use a separate goroutine to accept connection
 			go HandleConnection(listener, node)
 		}
 
 		// Start periodic tasks
-		se := ScheduledExecutor{delay: time.Duration(Arguments.Stabilize) * time.Millisecond, quit: make(chan int)}
-		se.Start(func() {
+		se_stab := ScheduledExecutor{delay: time.Duration(Arguments.Stabilize) * time.Millisecond, quit: make(chan int)}
+		se_stab.Start(func() {
 			// node.stabilize()
 		})
-		// TODO: Check if this usage of starting periodic task is correct, do similar things for other periodic tasks
+
+		se_ff := ScheduledExecutor{delay: time.Duration(Arguments.FixFingers) * time.Millisecond, quit: make(chan int)}
+		se_ff.Start(func() {
+			// node.fixFingers()
+		})
+
+		se_cp := ScheduledExecutor{delay: time.Duration(Arguments.CheckPred) * time.Millisecond, quit: make(chan int)}
+		se_cp.Start(func() {
+			// node.checkPredecessor()
+		})
 
 		// Get user input for printing states
 		reader := bufio.NewReader(os.Stdin)
@@ -108,19 +123,29 @@ func main() {
 				key, _ := reader.ReadString('\n')
 				key = strings.TrimSpace(key)
 				fmt.Println(key)
-				// TODO: Implement lookup function
-				// node.lookUp(key)
+				resultAddr, err := lookUp(key, node)
+				if err != nil {
+					fmt.Print(err)
+				} else {
+					fmt.Println("The address of the key is ", resultAddr)
+				}
 			} else if command == "STOREFILE" || command == "S" {
 				fmt.Println("Please enter the file name you want to store")
 				fileName, _ := reader.ReadString('\n')
 				fileName = strings.TrimSpace(fileName)
 				fmt.Println(fileName)
-				// TODO: Implement store file function
-				// node.storeFile(fileName)
+				err := storeFile(fileName, node)
+				if err != nil {
+					fmt.Print(err)
+				} else {
+					fmt.Println("Store file success")
+				}
 			} else if command == "QUIT" || command == "Q" {
 				// Quit the program
 				// Assign a value to quit channel to stop periodic tasks
-				se.quit <- 1
+				se_stab.quit <- 1
+				se_ff.quit <- 1
+				se_cp.quit <- 1
 				os.Exit(0)
 			} else {
 				fmt.Println("Invalid command")

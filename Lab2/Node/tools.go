@@ -10,7 +10,6 @@ import (
 	"math/big"
 	"net"
 	"net/rpc"
-	"net/rpc/jsonrpc"
 	"regexp"
 )
 
@@ -128,7 +127,7 @@ func (node *Node) initSuccessors() {
 	}
 }
 
-func (node *Node) joinChord(joinNode NodeAddress) {
+func (node *Node) joinChord(joinNode NodeAddress) error {
 	// Todo: Join the Chord ring
 	// Find the successor of the node's identifier
 	// Set the node's predecessor to nil and successors to the exits node
@@ -147,22 +146,11 @@ func (node *Node) joinChord(joinNode NodeAddress) {
 		err := ChordCall(targetNode, "Node.GetFirstSuccrssorAddressRPC", "", &succesorAddr)
 		if err != nil {
 			fmt.Println("GetFirstSuccrssorAddressRPC Error: ", err)
-			break
+			return err
 		}
 		node.Successors[i] = succesorAddr
 	}
-
-	// Notify the successor[0] that we are its predecessor
-	reply := false
-	err := ChordCall(node.Successors[0], "Node.SetPredecessorRPC", node.Address, &reply)
-	if err != nil {
-		fmt.Println("SetPredecessorRPC Error: ", err)
-	}
-	if reply {
-		fmt.Println("Set predecessor success")
-	} else {
-		fmt.Println("Set predecessor failed")
-	}
+	return nil
 }
 
 func (node *Node) getFirstSuccrssorAddress() *NodeAddress {
@@ -178,7 +166,7 @@ func (node *Node) GetFirstSuccrssorAddressRPC(fakeRequest string, succesorAddr *
 	// Get the first successor address
 	succesorAddr = node.getFirstSuccrssorAddress()
 	if succesorAddr == nil {
-		return errors.New("No successor")
+		return errors.New("no successor")
 	}
 	return nil
 }
@@ -189,6 +177,7 @@ func (node *Node) setPredecessor(predecessorAddress NodeAddress) *bool {
 	return &flag
 }
 
+// TODO: warning here:argument reply is overwritten before first use
 func (node *Node) SetPredecessorRPC(predecessorAddress NodeAddress, reply *bool) error {
 	fmt.Println("-------------- Invoke SetPredecessorRPC function ------------")
 	reply = node.setPredecessor(predecessorAddress)
@@ -196,6 +185,7 @@ func (node *Node) SetPredecessorRPC(predecessorAddress NodeAddress, reply *bool)
 		fmt.Println("Set predecessor success")
 	} else {
 		fmt.Println("Set predecessor failed")
+		return errors.New("set predecessor failed")
 	}
 	return nil
 }
@@ -204,7 +194,10 @@ func (node *Node) createChord() {
 	// Create a new Chord ring
 	// Set the node's predecessor to nil and successors to itself
 	node.Predecessor = ""
-	node.Successors[0] = node.Address
+	// All successors are itself when create a new Chord ring
+	for i := 0; i < len(node.Successors); i++ {
+		node.Successors[i] = node.Address
+	}
 }
 
 func (node *Node) leaveChord() {
@@ -252,7 +245,7 @@ type RPCServive interface{
 }
 */
 func ChordCall(targetNode NodeAddress, method string, request interface{}, reply interface{}) error {
-	client, err := jsonrpc.Dial("tcp", string(targetNode))
+	client, err := rpc.Dial("tcp", string(targetNode))
 	if err != nil {
 		fmt.Println("Dial Error: ", err)
 		return err
@@ -612,9 +605,9 @@ func getCmdArgs() Arguments {
 	flag.StringVar(&ja, "ja", "Unspecified", "Joining node address")
 	flag.IntVar(&jp, "jp", 8000, "Joining node port")
 	flag.IntVar(&ts, "ts", 1000, "The time in milliseconds between invocations of stabilize.")
-	flag.IntVar(&tff, "ttf", 1000, "The time in milliseconds between invocations of fix_fingers.")
+	flag.IntVar(&tff, "tff", 1000, "The time in milliseconds between invocations of fix_fingers.")
 	flag.IntVar(&tcp, "tcp", 1000, "The time in milliseconds between invocations of check_predecessor.")
-	flag.IntVar(&r, "r", 4, "The number of successors to maintain.")
+	flag.IntVar(&r, "r", 3, "The number of successors to maintain.")
 	flag.StringVar(&i, "i", "Default", "Client ID")
 	flag.Parse()
 
@@ -696,7 +689,7 @@ func CheckArgsValid(args Arguments) int {
 }
 
 // func call(address string, method string, request interface{}, reply interface{}) error{
-// 	return rpc.NewClientWithCodec(jsonrpc.NewClientCodec(
+// 	return rpc.NewClientWithCodec(rpc.NewClientCodec(
 // }
 
 func strHash(elt string) *big.Int {
@@ -711,4 +704,32 @@ func between(start, elt, end *big.Int, inclusive bool) bool {
 	} else {
 		return start.Cmp(elt) < 0 || elt.Cmp(end) < 0 || (inclusive && elt.Cmp(end) == 0)
 	}
+}
+
+func lookUp(key string, node *Node) (NodeAddress, error) {
+	// Find the successor of key
+	// Return the successor's address and port
+	addr := find(strHash(key), node.Address)
+	if addr == "-1" {
+		return "", errors.New("cannot find the store position of the key")
+	} else {
+		return addr, nil
+	}
+}
+
+func storeFile(fileName string, node *Node) error {
+	// Store the file in the node
+	// Return the address and port of the node that stores the file
+	addr, err := lookUp(fileName, node)
+	fmt.Println("The file is stored in node: ", addr)
+	if err != nil {
+		return err
+	} else {
+		// TODO: implement ChordRPC.StoreFile()
+		// err = ChordCall(addr, "ChordRPC.StoreFile", fileName, nil)
+		// if err != nil {
+		// 	return err
+		// }
+	}
+	return nil
 }
