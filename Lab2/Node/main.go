@@ -128,7 +128,7 @@ func main() {
 				key, _ := reader.ReadString('\n')
 				key = strings.TrimSpace(key)
 				fmt.Println(key)
-				resultAddr, err := lookUp(key, node)
+				resultAddr, err := clientLookUp(key, node)
 				if err != nil {
 					fmt.Print(err)
 				} else {
@@ -138,7 +138,6 @@ func main() {
 				fmt.Println("Please enter the file name you want to store")
 				fileName, _ := reader.ReadString('\n')
 				fileName = strings.TrimSpace(fileName)
-				fmt.Println(fileName)
 				err := clientStoreFile(fileName, node)
 				if err != nil {
 					fmt.Print(err)

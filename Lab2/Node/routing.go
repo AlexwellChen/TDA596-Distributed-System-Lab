@@ -9,7 +9,7 @@ import (
 /*                  Routing Functions By: Alexwell            */
 /*------------------------------------------------------------*/
 
-// Local use function
+// Local use functionFindSuccessorRPC
 func (node *Node) closePrecedingNode(requestID *big.Int) NodeAddress {
 	// fmt.Println("************ Invoke closePrecedingNode function ************")
 	fingerTableSize := len(node.FingerTable)
@@ -29,6 +29,7 @@ func (node *Node) closePrecedingNode(requestID *big.Int) NodeAddress {
 // Lookup
 func find(id *big.Int, startNode NodeAddress) NodeAddress {
 	fmt.Println("****************** Invoke find function *********************")
+	fmt.Println("The id to be found is: ", id.Mod(id, hashMod))
 	found := false
 	nextNode := startNode
 	i := 0
@@ -41,6 +42,7 @@ func find(id *big.Int, startNode NodeAddress) NodeAddress {
 			fmt.Println(err)
 			break
 		}
+		fmt.Println("The result of find is: ", result)
 		found = result.found
 		nextNode = result.SuccessorAddress
 		i++
@@ -65,7 +67,7 @@ type FindSuccessorRPCReply struct {
 }
 
 // Local use function
-func (node *Node) findSuccessor(requestID *big.Int) (bool, NodeAddress) {
+func (node *Node) findSuccessor(requestID *big.Int) (res FindSuccessorRPCReply) {
 	// fmt.Println("*************** Invoke findSuccessor function ***************")
 	successorName := ""
 	var getNameRPCReply GetNameRPCReply
@@ -73,18 +75,24 @@ func (node *Node) findSuccessor(requestID *big.Int) (bool, NodeAddress) {
 	successorName = getNameRPCReply.Name
 	successorId := strHash(successorName)
 	successorId.Mod(successorId, hashMod)
+	requestID.Mod(requestID, hashMod)
+
 	if between(node.Identifier, requestID, successorId, true) {
-		// fmt.Println("Successor is: ", node.Successors[0])
-		return true, node.Successors[0]
+		if requestID.String() == "29" {
+			fmt.Println("Between range is ", node.Identifier, requestID, successorId)
+			fmt.Println("Successor is: ", node.Successors[0])
+		}
+		res = FindSuccessorRPCReply{true, node.Successors[0]}
 	} else {
 		successorAddr := node.closePrecedingNode(requestID)
 		// fmt.Println("Close Preceding Node is: ", successorAddr)
 		// Get the successor of the close preceding node
 		var findSuccessorRPCReply FindSuccessorRPCReply
 		ChordCall(successorAddr, "Node.FindSuccessorRPC", requestID, &findSuccessorRPCReply)
+		res = FindSuccessorRPCReply{findSuccessorRPCReply.found, findSuccessorRPCReply.SuccessorAddress}
 
-		return false, findSuccessorRPCReply.SuccessorAddress
 	}
+	return res
 }
 
 /*
@@ -95,7 +103,10 @@ func (node *Node) findSuccessor(requestID *big.Int) (bool, NodeAddress) {
  */
 func (node *Node) FindSuccessorRPC(requestID *big.Int, reply *FindSuccessorRPCReply) error {
 	// fmt.Println("-------------- Invoke FindSuccessorRPC function ------------")
-	reply.found, reply.SuccessorAddress = node.findSuccessor(requestID)
+	*reply = node.findSuccessor(requestID)
+	if !reply.found {
+		fmt.Println("find fail in FindSuccessorRPC")
+	}
 	return nil
 }
 

@@ -219,7 +219,7 @@ func (node *Node) storeFile(f FileRPC) bool {
 		return false
 	}
 	defer file.Close()
-	_, err = file.WriteString(f.Content)
+	_, err = file.Write(f.Content)
 	if err != nil {
 		fmt.Println("Write file failed")
 		return false
