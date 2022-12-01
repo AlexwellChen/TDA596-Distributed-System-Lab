@@ -80,7 +80,7 @@ func (node *Node) stabilize() error {
 	var fakeReply NotifyRPCReply
 	err = ChordCall(node.Successors[0], "Node.NotifyRPC", node.Address, &fakeReply)
 	if !fakeReply.Success {
-		fmt.Println("Notify failed: ", fakeReply.err)
+		// fmt.Println("Notify failed: ", fakeReply.err)
 	} else {
 		// fmt.Println("Notify success")
 	}
@@ -93,11 +93,12 @@ func (node *Node) checkPredecessor() error {
 	pred := node.Predecessor
 	if pred != "" {
 		//check connection
-		client, err := rpc.DialHTTP("tcp", string(pred))
+		client, err := rpc.Dial("tcp", string(pred))
 		//if connection failed, set predecessor to nil
 		if err != nil {
 			fmt.Printf("Predecessor %s has failed\n", string(pred))
 			node.Predecessor = ""
+			client.Close()
 		} else {
 			client.Close()
 		}
@@ -189,7 +190,7 @@ type NotifyRPCReply struct {
 
 // 'address' thinks it might be our predecessor
 func (node *Node) notify(address NodeAddress) (bool, error) {
-	fmt.Println("***************** Invoke notify function ********************")
+	// fmt.Println("***************** Invoke notify function ********************")
 	//if (predecessor is nil or n' ∈ (predecessor, n))
 	// Get predecessor name
 	if node.Predecessor != "" {
@@ -219,7 +220,7 @@ func (node *Node) notify(address NodeAddress) (bool, error) {
 		addressId.Mod(addressId, hashMod)
 
 		nodeId := node.Identifier
-		fmt.Println("predcessorId: ", predcessorId, "addressId: ", addressId, "nodeId: ", nodeId)
+		// fmt.Println("predcessorId: ", predcessorId, "addressId: ", addressId, "nodeId: ", nodeId)
 		if between(predcessorId, addressId, nodeId, false) {
 			//predecessor = n'
 			node.Predecessor = address

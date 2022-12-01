@@ -11,7 +11,7 @@ import (
 
 // Local use function
 func (node *Node) closePrecedingNode(requestID *big.Int) NodeAddress {
-	fmt.Println("************ Invoke closePrecedingNode function ************")
+	// fmt.Println("************ Invoke closePrecedingNode function ************")
 	fingerTableSize := len(node.FingerTable)
 	for i := fingerTableSize - 1; i >= 1; i-- {
 		var reply GetNameRPCReply
@@ -74,7 +74,7 @@ func (node *Node) findSuccessor(requestID *big.Int) (bool, NodeAddress) {
 		return true, node.Successors[0]
 	} else {
 		successorAddr := node.closePrecedingNode(requestID)
-		fmt.Println("Close Preceding Node is: ", successorAddr)
+		// fmt.Println("Close Preceding Node is: ", successorAddr)
 		return false, successorAddr
 	}
 }
