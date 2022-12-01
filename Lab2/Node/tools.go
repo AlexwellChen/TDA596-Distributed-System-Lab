@@ -31,7 +31,7 @@ type RPCServive interface{
 }
 */
 func ChordCall(targetNode NodeAddress, method string, request interface{}, reply interface{}) error {
-	fmt.Println("Dial to ", targetNode)
+	// fmt.Println("Dial to ", targetNode)
 	client, err := jsonrpc.Dial("tcp", string(targetNode))
 	if err != nil {
 		fmt.Println("Dial Error: ", err)

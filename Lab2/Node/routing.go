@@ -64,11 +64,13 @@ type FindSuccessorRPCReply struct {
 
 // Local use function
 func (node *Node) findSuccessor(requestID *big.Int) (bool, NodeAddress) {
-	fmt.Println("*************** Invoke findSuccessor function ***************")
+	// fmt.Println("*************** Invoke findSuccessor function ***************")
 	successorName := ""
-	ChordCall(node.Successors[0], "Node.GetNameRPC", "", &successorName)
+	var getNameRPCReply GetNameRPCReply
+	ChordCall(node.Successors[0], "Node.GetNameRPC", "", &getNameRPCReply)
+	successorName = getNameRPCReply.Name
 	if between(node.Identifier, requestID, strHash(string(successorName)), true) {
-		fmt.Println("Successor is: ", node.Successors[0])
+		// fmt.Println("Successor is: ", node.Successors[0])
 		return true, node.Successors[0]
 	} else {
 		successorAddr := node.closePrecedingNode(requestID)
@@ -84,7 +86,7 @@ func (node *Node) findSuccessor(requestID *big.Int) (bool, NodeAddress) {
 * 				successor: the successor of the key
  */
 func (node *Node) FindSuccessorRPC(requestID *big.Int, reply *FindSuccessorRPCReply) error {
-	fmt.Println("-------------- Invoke FindSuccessorRPC function ------------")
+	// fmt.Println("-------------- Invoke FindSuccessorRPC function ------------")
 	reply.found, reply.SuccessorAddress = node.findSuccessor(requestID)
 	return nil
 }

@@ -41,7 +41,8 @@ func HandleConnection(listener *net.TCPListener, node *Node) {
 			fmt.Println("Accept failed:", err.Error())
 			continue
 		} else {
-			fmt.Println("Accept success")
+			// When stablize, too much print
+			// fmt.Println("Accept success")
 		}
 		go jsonrpc.ServeConn(conn)
 	}
@@ -60,6 +61,7 @@ func main() {
 		fmt.Println("Valid command line arguments")
 		// Create new Node
 		node := NewNode(Arguments)
+
 		IPAddr := fmt.Sprintf("%s:%d", Arguments.Address, Arguments.Port)
 		tcpAddr, err := net.ResolveTCPAddr("tcp4", IPAddr)
 		if err != nil {
@@ -80,8 +82,8 @@ func main() {
 
 		if valid == 0 {
 			// Join exsiting chord
-
 			RemoteAddr := fmt.Sprintf("%s:%d", Arguments.JoinAddress, Arguments.JoinPort)
+
 			// Connect to the remote node
 			fmt.Println("Connecting to the remote node..." + RemoteAddr)
 			err := node.joinChord(NodeAddress(RemoteAddr))
@@ -100,17 +102,17 @@ func main() {
 		// Start periodic tasks
 		se_stab := ScheduledExecutor{delay: time.Duration(Arguments.Stabilize) * time.Millisecond, quit: make(chan int)}
 		se_stab.Start(func() {
-			// node.stabilize()
+			node.stabilize()
 		})
 
 		se_ff := ScheduledExecutor{delay: time.Duration(Arguments.FixFingers) * time.Millisecond, quit: make(chan int)}
 		se_ff.Start(func() {
-			// node.fixFingers()
+			node.fixFingers()
 		})
 
 		se_cp := ScheduledExecutor{delay: time.Duration(Arguments.CheckPred) * time.Millisecond, quit: make(chan int)}
 		se_cp.Start(func() {
-			// node.checkPredecessor()
+			node.checkPredecessor()
 		})
 
 		// Get user input for printing states

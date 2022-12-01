@@ -150,7 +150,7 @@ func (node *Node) createChord() {
 	node.Predecessor = ""
 	// All successors are itself when create a new Chord ring
 	for i := 0; i < len(node.Successors); i++ {
-		node.Successors[i] = node.Address
+		// node.Successors[i] = node.Address
 	}
 }
 
