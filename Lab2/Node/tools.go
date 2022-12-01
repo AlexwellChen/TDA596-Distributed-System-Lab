@@ -505,7 +505,7 @@ func (node *Node) findSuccessor(requestID *big.Int) (bool, NodeAddress) {
 		return true, node.Successors[0]
 	} else {
 		successorAddr := node.closePrecedingNode(requestID)
-		fmt.Println("Successor is: ", successorAddr)
+		fmt.Println("Close Preceding Node is: ", successorAddr)
 		return false, successorAddr
 	}
 }
