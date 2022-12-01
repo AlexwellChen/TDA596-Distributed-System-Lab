@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"net/rpc"
+	"net/rpc/jsonrpc"
 	"os"
 	"strings"
 	"time"
@@ -40,7 +41,7 @@ func HandleConnection(listener *net.TCPListener, node *Node) {
 			fmt.Println("Accept failed:", err.Error())
 			continue
 		}
-		rpc.ServeConn(conn)
+		jsonrpc.ServeConn(conn)
 	}
 }
 

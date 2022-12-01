@@ -10,6 +10,7 @@ import (
 	"math/big"
 	"net"
 	"net/rpc"
+	"net/rpc/jsonrpc"
 	"regexp"
 )
 
@@ -139,7 +140,11 @@ func (node *Node) joinChord(joinNode NodeAddress) {
 	// Fine other successors, use FindSuccessor RPC
 	for i := 1; i < len(node.Successors); i++ {
 		var succesorAddr NodeAddress
-		err := ChordCall(node.Successors[i-1], "Node.GetFirstSuccrssorAddressRPC", "", &succesorAddr)
+		targetNode := node.Successors[i-1]
+		if targetNode == "" {
+			break
+		}
+		err := ChordCall(targetNode, "Node.GetFirstSuccrssorAddressRPC", "", &succesorAddr)
 		if err != nil {
 			fmt.Println("GetFirstSuccrssorAddressRPC Error: ", err)
 			break
@@ -187,6 +192,11 @@ func (node *Node) setPredecessor(predecessorAddress NodeAddress) *bool {
 func (node *Node) SetPredecessorRPC(predecessorAddress NodeAddress, reply *bool) error {
 	fmt.Println("-------------- Invoke SetPredecessorRPC function ------------")
 	reply = node.setPredecessor(predecessorAddress)
+	if *reply {
+		fmt.Println("Set predecessor success")
+	} else {
+		fmt.Println("Set predecessor failed")
+	}
 	return nil
 }
 
@@ -242,13 +252,18 @@ type RPCServive interface{
 }
 */
 func ChordCall(targetNode NodeAddress, method string, request interface{}, reply interface{}) error {
-	client, err := rpc.Dial("tcp", string(targetNode))
+	client, err := jsonrpc.Dial("tcp", string(targetNode))
 	if err != nil {
+		fmt.Println("Dial Error: ", err)
 		return err
 	}
 	defer client.Close()
 	err = client.Call(method, request, &reply)
-	return err
+	if err != nil {
+		fmt.Println("Call Error: ", err)
+		return err
+	}
+	return nil
 }
 
 /*
