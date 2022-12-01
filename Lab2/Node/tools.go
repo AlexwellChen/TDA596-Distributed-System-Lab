@@ -134,21 +134,15 @@ func (node *Node) joinChord(joinNode NodeAddress) error {
 	// joinNode is the successor of current node, which is node.Successors[0]
 	// current node will be the predecessor of joinNode
 	node.Predecessor = ""
-	node.Successors[0] = joinNode
+	fmt.Printf("Node %s join the Chord ring: %s ", node.Name, joinNode)
 
-	// Fine other successors, use FindSuccessor RPC
-	for i := 1; i < len(node.Successors); i++ {
-		var succesorAddr NodeAddress
-		targetNode := node.Successors[i-1]
-		if targetNode == "" {
-			break
-		}
-		err := ChordCall(targetNode, "Node.GetFirstSuccrssorAddressRPC", "", &succesorAddr)
-		if err != nil {
-			fmt.Println("GetFirstSuccrssorAddressRPC Error: ", err)
-			return err
-		}
-		node.Successors[i] = succesorAddr
+	//  Join node is in charge of looking for the successor of the node's identifier
+	// 1. Call the joinNode's findSuccessor() to find the successor of the node's identifier
+	var successorAddr NodeAddress
+	err := ChordCall(joinNode, "Node.FindSuccessorRPC", node.Identifier, &successorAddr)
+	node.Successors[0] = successorAddr
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -245,7 +239,7 @@ type RPCServive interface{
 }
 */
 func ChordCall(targetNode NodeAddress, method string, request interface{}, reply interface{}) error {
-	client, err := rpc.Dial("tcp", string(targetNode))
+	client, err := rpc.DialHTTP("tcp", string(targetNode))
 	if err != nil {
 		fmt.Println("Dial Error: ", err)
 		return err
@@ -361,7 +355,7 @@ func (node *Node) checkPredecessor() error {
 	pred := node.Predecessor
 	if pred != "" {
 		//check connection
-		client, err := rpc.Dial("tcp", string(pred))
+		client, err := rpc.DialHTTP("tcp", string(pred))
 		//if connection failed, set predecessor to nil
 		if err != nil {
 			fmt.Printf("Predecessor %s has failed", string(pred))

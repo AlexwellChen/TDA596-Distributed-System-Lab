@@ -59,7 +59,24 @@ func main() {
 		fmt.Println("Valid command line arguments")
 		// Create new Node
 		node := NewNode(Arguments)
+		IPAddr := fmt.Sprintf("%s:%d", Arguments.Address, Arguments.Port)
+		tcpAddr, err := net.ResolveTCPAddr("tcp4", IPAddr)
+		if err != nil {
+			fmt.Println("ResolveTCPAddr failed:", err.Error())
+			os.Exit(1)
+		}
 		rpc.Register(node)
+		// rpc.HandleHTTP()
+		// Listen to the address
+		listener, err := net.ListenTCP("tcp", tcpAddr)
+		if err != nil {
+			fmt.Println("ListenTCP failed:", err.Error())
+			os.Exit(1)
+		}
+		fmt.Println("Local node listening on ", tcpAddr)
+		// Use a separate goroutine to accept connection
+		go HandleConnection(listener, node)
+
 		if valid == 0 {
 			// Join exsiting chord
 
@@ -77,21 +94,6 @@ func main() {
 			// Create new chord
 			node.createChord()
 			// Combine address and port, convert port to string
-			IPAddr := fmt.Sprintf("%s:%d", Arguments.Address, Arguments.Port)
-			tcpAddr, err := net.ResolveTCPAddr("tcp4", IPAddr)
-			if err != nil {
-				fmt.Println("ResolveTCPAddr failed:", err.Error())
-				os.Exit(1)
-			}
-			// Listen to the address
-			listener, err := net.ListenTCP("tcp", tcpAddr)
-			if err != nil {
-				fmt.Println("ListenTCP failed:", err.Error())
-				os.Exit(1)
-			}
-			fmt.Println("Created chord ring on ", tcpAddr)
-			// Use a separate goroutine to accept connection
-			go HandleConnection(listener, node)
 		}
 
 		// Start periodic tasks
