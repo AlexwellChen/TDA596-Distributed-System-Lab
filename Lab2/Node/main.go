@@ -139,7 +139,7 @@ func main() {
 				fileName, _ := reader.ReadString('\n')
 				fileName = strings.TrimSpace(fileName)
 				fmt.Println(fileName)
-				err := storeFile(fileName, node)
+				err := clientStoreFile(fileName, node)
 				if err != nil {
 					fmt.Print(err)
 				} else {

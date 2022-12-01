@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"os"
 )
 
 /*------------------------------------------------------------*/
@@ -51,7 +52,7 @@ type Node struct {
 	PrivateKey *rsa.PrivateKey
 	PublicKey  *rsa.PublicKey
 
-	Bucket map[Key]string // Hash Key -> File name value store
+	Bucket map[string]string // Hash Key -> File name value store
 	/* Exp:
 	     ------------Store File-------------
 	     	Hash(Hello.txt) -> 123
@@ -89,7 +90,7 @@ func NewNode(args Arguments) *Node {
 	node.next = -1 // start from -1, then use fixFingers() to add 1 -> 0 max: m-1
 	node.Predecessor = ""
 	node.Successors = make([]NodeAddress, args.Successors)
-	node.Bucket = make(map[Key]string)
+	node.Bucket = make(map[string]string)
 	node.generateRSAKey(2048)
 	node.initFingerTable()
 	node.initSuccessors()
@@ -203,5 +204,33 @@ func (node *Node) SetPredecessorRPC(predecessorAddress NodeAddress, reply *SetPr
 		fmt.Println("Set predecessor failed")
 		return errors.New("set predecessor failed")
 	}
+	return nil
+}
+
+func (node *Node) storeFile(f FileRPC) bool {
+	// Store the file in the bucket
+	// Return true if success, false if failed
+	node.Bucket[f.Id.String()] = f.Name
+	filepath := "../file_download/" + f.Name
+	// Create the file on file path and store content
+	file, err := os.Create(filepath)
+	if err != nil {
+		fmt.Println("Create file failed")
+		return false
+	}
+	defer file.Close()
+	_, err = file.WriteString(f.Content)
+	if err != nil {
+		fmt.Println("Write file failed")
+		return false
+	}
+	fmt.Println("Store file success")
+	// Store the file in the file download folder
+	return true
+}
+
+func (node *Node) StoreFileRPC(f FileRPC, reply *bool) error {
+	fmt.Println("-------------- Invoke StoreFileRPC function ------------")
+	*reply = node.storeFile(f)
 	return nil
 }

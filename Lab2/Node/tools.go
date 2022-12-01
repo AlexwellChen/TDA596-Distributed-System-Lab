@@ -5,9 +5,11 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"math/big"
 	"net"
 	"net/rpc/jsonrpc"
+	"os"
 	"regexp"
 )
 
@@ -182,7 +184,7 @@ func between(start, elt, end *big.Int, inclusive bool) bool {
 	}
 }
 
-func lookUp(key string, node *Node) (NodeAddress, error) {
+func clientLookUp(key string, node *Node) (NodeAddress, error) {
 	// Find the successor of key
 	// Return the successor's address and port
 	addr := find(strHash(key), node.Address)
@@ -193,19 +195,45 @@ func lookUp(key string, node *Node) (NodeAddress, error) {
 	}
 }
 
-func storeFile(fileName string, node *Node) error {
+// File structure
+type FileRPC struct {
+	Id      *big.Int
+	Name    string
+	Content []byte
+}
+
+func clientStoreFile(fileName string, node *Node) error {
 	// Store the file in the node
 	// Return the address and port of the node that stores the file
-	addr, err := lookUp(fileName, node)
+	addr, err := clientLookUp(fileName, node)
+	if err != nil {
+		return err
+	}
 	fmt.Println("The file is stored in node: ", addr)
+
+	// Open file and pack into fileRPC
+	filepath := "../file_upload/" + fileName
+	file, err := os.Open(filepath)
+	if err != nil {
+		fmt.Println("Cannot open the file")
+		return err
+	}
+	defer file.Close()
+	// Init new file struct and put content into it
+	newFile := FileRPC{}
+	newFile.Name = fileName
+	newFile.Content, err = ioutil.ReadAll(file)
+	newFile.Id = strHash(fileName)
 	if err != nil {
 		return err
 	} else {
 		// TODO: implement ChordRPC.StoreFile()
-		// err = ChordCall(addr, "ChordRPC.StoreFile", fileName, nil)
-		// if err != nil {
-		// 	return err
-		// }
+		reply := ""
+		err = ChordCall(addr, "node.StoreFileRPC", newFile, &reply)
+		if err != nil {
+			return err
+		}
 	}
+
 	return nil
 }
