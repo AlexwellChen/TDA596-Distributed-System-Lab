@@ -24,10 +24,12 @@ func (node *Node) stabilize() error {
 	// fmt.Println("***************** Invoke stabilize function *****************")
 	//node.Successors[0] = node.getSuccessor()
 	var getSuccessorListRPCReply GetSuccessorListRPCReply
+	//fmt.Println("node.Successors: ", node.Successors[0])
 	err := ChordCall(node.Successors[0], "Node.GetSuccessorListRPC", struct{}{}, &getSuccessorListRPCReply)
 	successors := getSuccessorListRPCReply.SuccessorList
 	if err == nil {
 		for i := 0; i < len(successors)-1; i++ {
+			//fmt.Printf("node successors[%d]: successors[%d]: %s\n", i+1, i, successors[i])
 			node.Successors[i+1] = successors[i]
 			//Todo: check if need to do a loop chordCall for all successors[0]
 		}
@@ -74,6 +76,13 @@ func (node *Node) stabilize() error {
 		predecessorName := getNameReply.Name
 		if predecessorAddr != "" && between(strHash(string(node.Name)),
 			strHash(string(predecessorName)), strHash(string(successorName)), false) {
+				/* fmt.Println(strHash(string(node.Name)),"and",
+				strHash(string(predecessorName)), "and",strHash(string(successorName)))
+				fmt.Println(node.Identifier)
+				fmt.Println(strHash(string(node.Name)).Cmp(strHash(string(predecessorName))))
+				fmt.Println(strHash(string(predecessorName)).Cmp(strHash(string(successorName))))
+			fmt.Printf("Predecessor %s is between %s and %s\n", predecessorAddr, node.Name, successorName)
+			fmt.Printf("Set successor[0] to %s\n", predecessorAddr) */
 			node.Successors[0] = predecessorAddr
 		}
 	}
@@ -116,7 +125,7 @@ func (node *Node) fingerEntry(fingerentry int) *big.Int {
 	id := node.Identifier
 	two := big.NewInt(2)
 	// 2^(k-1) here use [0,m-1], so k-1 = fingerentry
-	exponent := big.NewInt(int64(fingerentry))
+	exponent := big.NewInt(int64(fingerentry) - 1)
 	//2^(k-1)
 	fingerEntry := new(big.Int).Exp(two, exponent, nil)
 	// n + 2^(k-1)
@@ -131,8 +140,8 @@ func (node *Node) fixFingers() error {
 	// fmt.Println("*************** Invoke findSuccessor function ***************")
 	node.next = node.next + 1
 	//use 0 to m-1, init next = -1, then use next+1 to 0
-	if node.next > fingerTableSize-1 {
-		node.next = 0
+	if node.next > fingerTableSize  {
+		node.next = 1
 	}
 	id := node.fingerEntry(node.next)
 	//find successor of id
@@ -147,7 +156,6 @@ func (node *Node) fixFingers() error {
 		node.FingerTable[node.next].Address = result.SuccessorAddress
 		node.FingerTable[node.next].Id = id.Bytes()
 	} */
-	node.FingerTable[node.next].Address = result.SuccessorAddress
 	// // Get successor's name
 	var getSuccessorNameRPCReply GetNameRPCReply
 	err = ChordCall(result.SuccessorAddress, "Node.GetNameRPC", "", &getSuccessorNameRPCReply)
@@ -155,8 +163,12 @@ func (node *Node) fixFingers() error {
 		fmt.Println("Get successor name failed")
 		return err
 	}
-	fmt.Println("FingerTable[", node.next, "] = ", getSuccessorNameRPCReply.Name)
+	//fmt.Println("FingerTable[", node.next, "] = ", getSuccessorNameRPCReply.Name)
 	node.FingerTable[node.next].Id = id.Bytes()
+	if node.FingerTable[node.next].Address != result.SuccessorAddress && result.SuccessorAddress != "" {
+		fmt.Println("FingerTable[", node.next, "] = ", getSuccessorNameRPCReply.Name)
+		node.FingerTable[node.next].Address = result.SuccessorAddress
+	}
 	/* 		_, addr := node.findSuccessor(id)
 	   		if addr != "" && addr != node.FingerTable[node.next].Address {
 	   			node.FingerTable[node.next].Address = addr
@@ -165,9 +177,9 @@ func (node *Node) fixFingers() error {
 	//optimization, update other finger table entries use the first successor
 	for {
 		node.next = node.next + 1
-		if node.next > fingerTableSize-1 {
+		if node.next > fingerTableSize {
 			// we have updated all entries, set to -1
-			node.next = -1
+			node.next = 0
 			return nil
 		}
 		id := node.fingerEntry(node.next)
@@ -181,8 +193,11 @@ func (node *Node) fixFingers() error {
 		successorId := strHash(string(successorName))
 		successorId.Mod(successorId, hashMod)
 		if between(node.Identifier, id, successorId, false) && result.SuccessorAddress != "" {
-			node.FingerTable[node.next].Id = id.Bytes()
-			node.FingerTable[node.next].Address = result.SuccessorAddress
+			if node.FingerTable[node.next].Address != result.SuccessorAddress && result.SuccessorAddress != "" {
+				node.FingerTable[node.next].Id = id.Bytes()
+				node.FingerTable[node.next].Address = result.SuccessorAddress
+				fmt.Println("FingerTable[", node.next, "] = ", result.SuccessorAddress)
+			}
 		} else {
 			node.next--
 			return nil

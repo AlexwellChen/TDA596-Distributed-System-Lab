@@ -86,8 +86,8 @@ func NewNode(args Arguments) *Node {
 	}
 	node.Identifier = strHash(string(node.Name))
 	node.Identifier.Mod(node.Identifier, hashMod)
-	node.FingerTable = make([]fingerEntry, fingerTableSize)
-	node.next = -1 // start from -1, then use fixFingers() to add 1 -> 0 max: m-1
+	node.FingerTable = make([]fingerEntry, fingerTableSize+1)
+	node.next = 0 // start from -1, then use fixFingers() to add 1 -> 0 max: m-1
 	node.Predecessor = ""
 	node.Successors = make([]NodeAddress, args.Successors)
 	node.Bucket = make(map[string]string)
@@ -103,10 +103,13 @@ func NewNode(args Arguments) *Node {
  */
 func (node *Node) initFingerTable() {
 	// Initialize finger table
-	for i := 0; i < fingerTableSize; i++ {
+	node.FingerTable[0].Id = node.Identifier.Bytes()
+	node.FingerTable[0].Address = node.Address
+	fmt.Println("fingerTable[0] = ", node.FingerTable[0].Id, node.FingerTable[0].Address)
+	for i := 1; i < fingerTableSize+1; i++ {
 		// Caculate the id of the ith finger
-		// id = (n + 2^i) mod (2^m)
-		id := new(big.Int).Add(node.Identifier, new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(i)), nil))
+		// id = (n + 2^i-1) mod (2^m)
+		id := new(big.Int).Add(node.Identifier, new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(i)-1), nil))
 		id.Mod(id, hashMod)
 		node.FingerTable[i].Id = id.Bytes()
 
@@ -172,7 +175,7 @@ func (node *Node) printState() {
 		fmt.Println("Successor ", i, " address: ", node.Successors[i])
 	}
 	fmt.Println("Node Finger Table: ")
-	for i := 0; i < fingerTableSize; i++ {
+	for i := 0; i < fingerTableSize+1; i++ {
 		enrty := node.FingerTable[i]
 		id := new(big.Int).SetBytes(enrty.Id)
 		address := enrty.Address
