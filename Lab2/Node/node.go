@@ -161,6 +161,7 @@ func (node *Node) createChord() {
 func (node *Node) leaveChord() {
 	// Todo: Leave the Chord ring
 	// For failure handling, backup the data in the bucket to the successor (Bonus)
+
 }
 
 func (node *Node) printState() {
@@ -227,17 +228,22 @@ func (node *Node) storeFile(f FileRPC) bool {
 		fmt.Println("Write file failed")
 		return false
 	}
-	fmt.Println("Store file success")
 	// Store the file in the file download folder
 	return true
 }
 
 type StoreFileRPCReply struct {
 	Success bool
+	err     error
 }
 
 func (node *Node) StoreFileRPC(f FileRPC, reply *StoreFileRPCReply) error {
 	fmt.Println("-------------- Invoke StoreFileRPC function ------------")
 	reply.Success = node.storeFile(f)
+	if !reply.Success {
+		reply.err = errors.New("store file failed")
+	} else {
+		reply.err = nil
+	}
 	return nil
 }
