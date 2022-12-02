@@ -74,8 +74,14 @@ func (node *Node) stabilize() error {
 			return err
 		}
 		predecessorName := getNameReply.Name
-		if predecessorAddr != "" && between(strHash(string(node.Name)),
-			strHash(string(predecessorName)), strHash(string(successorName)), false) {
+		nodeId:= strHash(string(node.Name))
+		nodeId.Mod(nodeId, hashMod)
+		predecessorId := strHash(string(predecessorName))
+		predecessorId.Mod(predecessorId, hashMod)
+		successorId := strHash(string(successorName))
+		successorId.Mod(successorId, hashMod)
+		if predecessorAddr != "" && between(nodeId,
+			predecessorId, successorId, false) {
 				/* fmt.Println(strHash(string(node.Name)),"and",
 				strHash(string(predecessorName)), "and",strHash(string(successorName)))
 				fmt.Println(node.Identifier)
