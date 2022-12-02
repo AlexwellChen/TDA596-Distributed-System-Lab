@@ -40,7 +40,7 @@ func ChordCall(targetNode NodeAddress, method string, request interface{}, reply
 		return err
 	}
 	defer client.Close()
-	err = client.Call(method, request, &reply)
+	err = client.Call(method, request, reply)
 	if err != nil {
 		fmt.Println("Call Error:", err)
 		return err

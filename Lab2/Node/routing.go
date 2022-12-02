@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"math/big"
 )
@@ -38,12 +39,17 @@ func find(id *big.Int, startNode NodeAddress) NodeAddress {
 		// found, nextNode = nextNode.FindSuccessor(id)
 		result := FindSuccessorRPCReply{}
 		err := ChordCall(nextNode, "Node.FindSuccessorRPC", id, &result)
+		// Now we are using err to indicate whether we find the successor
 		if err != nil {
+			// if there is an error, we find the successor of the close preceding node
 			fmt.Println(err)
-			break
+			// break
+		} else {
+			// if there is no error, we find the successor
+			found = true
 		}
 		fmt.Println("The result of find is: ", result)
-		found = result.found
+		// found = result.found
 		nextNode = result.SuccessorAddress
 		i++
 	}
@@ -67,7 +73,7 @@ type FindSuccessorRPCReply struct {
 }
 
 // Local use function
-func (node *Node) findSuccessor(requestID *big.Int) (res FindSuccessorRPCReply) {
+func (node *Node) findSuccessor(requestID *big.Int) FindSuccessorRPCReply {
 	// fmt.Println("*************** Invoke findSuccessor function ***************")
 	successorName := ""
 	var getNameRPCReply GetNameRPCReply
@@ -77,12 +83,19 @@ func (node *Node) findSuccessor(requestID *big.Int) (res FindSuccessorRPCReply) 
 	successorId.Mod(successorId, hashMod)
 	requestID.Mod(requestID, hashMod)
 
+	var res FindSuccessorRPCReply
+	// bigInt to string
+	// IDstr := requestID.String()
+	// if IDstr == "29" {
+	// fmt.Println("The requestID is: ", IDstr)
 	if between(node.Identifier, requestID, successorId, true) {
 		if requestID.String() == "29" {
 			fmt.Println("Between range is ", node.Identifier, requestID, successorId)
 			fmt.Println("Successor is: ", node.Successors[0])
 		}
-		res = FindSuccessorRPCReply{true, node.Successors[0]}
+		flag := true
+
+		res = FindSuccessorRPCReply{flag, node.Successors[0]}
 	} else {
 		successorAddr := node.closePrecedingNode(requestID)
 		// fmt.Println("Close Preceding Node is: ", successorAddr)
@@ -103,10 +116,19 @@ func (node *Node) findSuccessor(requestID *big.Int) (res FindSuccessorRPCReply) 
  */
 func (node *Node) FindSuccessorRPC(requestID *big.Int, reply *FindSuccessorRPCReply) error {
 	// fmt.Println("-------------- Invoke FindSuccessorRPC function ------------")
-	*reply = node.findSuccessor(requestID)
-	if !reply.found {
-		// found == false means we are using closePrecedingNode to find the successor
-		// fmt.Println("find fail in FindSuccessorRPC")
+	res := node.findSuccessor(requestID)
+	if requestID.String() == "29" {
+		fmt.Println("The result in FindSuccessorRPC is: ", res)
+	}
+	reply.found = res.found
+	reply.SuccessorAddress = res.SuccessorAddress
+	// if !reply.found {
+	// 	// found == false means we are using closePrecedingNode to find the successor
+	// 	// fmt.Println("find fail in FindSuccessorRPC")
+	// }
+	if !res.found {
+		err := errors.New("find successor of closePrecedingNode")
+		return err
 	}
 	return nil
 }
