@@ -232,8 +232,12 @@ func (node *Node) storeFile(f FileRPC) bool {
 	return true
 }
 
-func (node *Node) StoreFileRPC(f FileRPC, reply *bool) error {
+type StoreFileRPCReply struct {
+	Success bool
+}
+
+func (node *Node) StoreFileRPC(f FileRPC, reply *StoreFileRPCReply) error {
 	fmt.Println("-------------- Invoke StoreFileRPC function ------------")
-	*reply = node.storeFile(f)
+	reply.Success = node.storeFile(f)
 	return nil
 }

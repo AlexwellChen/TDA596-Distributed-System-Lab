@@ -130,7 +130,7 @@ dmypy.json
 .DS_Store
 .vscode
 ./Server/root
-*.txt
+./Lab1/*.txt
 *.jpeg
 *.html
 *.css
