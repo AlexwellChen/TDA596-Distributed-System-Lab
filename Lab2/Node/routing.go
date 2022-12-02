@@ -105,7 +105,8 @@ func (node *Node) FindSuccessorRPC(requestID *big.Int, reply *FindSuccessorRPCRe
 	// fmt.Println("-------------- Invoke FindSuccessorRPC function ------------")
 	*reply = node.findSuccessor(requestID)
 	if !reply.found {
-		fmt.Println("find fail in FindSuccessorRPC")
+		// found == false means we are using closePrecedingNode to find the successor
+		// fmt.Println("find fail in FindSuccessorRPC")
 	}
 	return nil
 }

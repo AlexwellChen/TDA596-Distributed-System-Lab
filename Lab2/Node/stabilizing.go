@@ -149,13 +149,13 @@ func (node *Node) fixFingers() error {
 	} */
 	node.FingerTable[node.next].Address = result.SuccessorAddress
 	// // Get successor's name
-	// var getSuccessorNameRPCReply GetNameRPCReply
-	// err = ChordCall(result.SuccessorAddress, "Node.GetNameRPC", "", &getSuccessorNameRPCReply)
-	// if err != nil {
-	// 	fmt.Println("Get successor name failed")
-	// 	return err
-	// }
-	// fmt.Println("Successor name: ", getSuccessorNameRPCReply.Name)
+	var getSuccessorNameRPCReply GetNameRPCReply
+	err = ChordCall(result.SuccessorAddress, "Node.GetNameRPC", "", &getSuccessorNameRPCReply)
+	if err != nil {
+		fmt.Println("Get successor name failed")
+		return err
+	}
+	fmt.Println("FingerTable[", node.next, "] = ", getSuccessorNameRPCReply.Name)
 	node.FingerTable[node.next].Id = id.Bytes()
 	/* 		_, addr := node.findSuccessor(id)
 	   		if addr != "" && addr != node.FingerTable[node.next].Address {
@@ -166,7 +166,8 @@ func (node *Node) fixFingers() error {
 	for {
 		node.next = node.next + 1
 		if node.next > fingerTableSize-1 {
-			node.next = 0
+			// we have updated all entries, set to -1
+			node.next = -1
 			return nil
 		}
 		id := node.fingerEntry(node.next)
