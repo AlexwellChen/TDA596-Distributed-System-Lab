@@ -45,6 +45,9 @@ func ChordCall(targetNode NodeAddress, method string, request interface{}, reply
 		fmt.Println("Call Error:", err)
 		return err
 	}
+	// if method == "Node.FindSuccessorRPC" {
+	// 	fmt.Println("FindSuccessorRPC reply in Chord call: ", &reply)
+	// }
 	return nil
 }
 

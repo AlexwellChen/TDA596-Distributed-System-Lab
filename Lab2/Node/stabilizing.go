@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+
 	//"net/rpc"
 	"net/rpc/jsonrpc"
 )
@@ -73,7 +74,7 @@ func (node *Node) stabilize() error {
 			return err
 		}
 		predecessorName := getNameReply.Name
-		nodeId:= strHash(string(node.Name))
+		nodeId := strHash(string(node.Name))
 		nodeId.Mod(nodeId, hashMod)
 		predecessorId := strHash(string(predecessorName))
 		predecessorId.Mod(predecessorId, hashMod)
@@ -81,7 +82,7 @@ func (node *Node) stabilize() error {
 		successorId.Mod(successorId, hashMod)
 		if predecessorAddr != "" && between(nodeId,
 			predecessorId, successorId, false) {
-				/* fmt.Println(strHash(string(node.Name)),"and",
+			/* fmt.Println(strHash(string(node.Name)),"and",
 				strHash(string(predecessorName)), "and",strHash(string(successorName)))
 				fmt.Println(node.Identifier)
 				fmt.Println(strHash(string(node.Name)).Cmp(strHash(string(predecessorName))))
@@ -92,12 +93,12 @@ func (node *Node) stabilize() error {
 		}
 	}
 	var fakeReply NotifyRPCReply
-	err = ChordCall(node.Successors[0], "Node.NotifyRPC", node.Address, &fakeReply)
-/* 	if !fakeReply.Success {
-		// fmt.Println("Notify failed: ", fakeReply.err)
-	} else {
-		// fmt.Println("Notify success")
-	} */
+	ChordCall(node.Successors[0], "Node.NotifyRPC", node.Address, &fakeReply)
+	/* 	if !fakeReply.Success {
+	   		// fmt.Println("Notify failed: ", fakeReply.err)
+	   	} else {
+	   		// fmt.Println("Notify success")
+	   	} */
 	return nil
 }
 
@@ -140,7 +141,7 @@ func (node *Node) fixFingers() error {
 	fmt.Println("*************** Invoke fixfinger function ***************")
 	node.next = node.next + 1
 	//use 0 to m-1, init next = -1, then use next+1 to 0
-	if node.next > fingerTableSize  {
+	if node.next > fingerTableSize {
 		node.next = 1
 	}
 	id := node.fingerEntry(node.next)
@@ -151,6 +152,7 @@ func (node *Node) fixFingers() error {
 		fmt.Println("Find successor failed")
 		return err
 	}
+	fmt.Println("FindSuccessorRPC recieve result: ", result)
 	//update fingertable(next)
 	/* 	if result.found {
 		node.FingerTable[node.next].Address = result.SuccessorAddress
