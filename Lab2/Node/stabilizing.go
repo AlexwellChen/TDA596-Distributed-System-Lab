@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+
 	//"net/rpc"
 	"net/rpc/jsonrpc"
 )
@@ -92,7 +93,7 @@ func (node *Node) stabilize() error {
 		}
 	}
 	var fakeReply NotifyRPCReply
-	err = ChordCall(node.Successors[0], "Node.NotifyRPC", node.Address, &fakeReply)
+	ChordCall(node.Successors[0], "Node.NotifyRPC", node.Address, &fakeReply)
 	/* 	if !fakeReply.Success {
 	   		// fmt.Println("Notify failed: ", fakeReply.err)
 	   	} else {
@@ -151,6 +152,7 @@ func (node *Node) fixFingers() error {
 		fmt.Println("Find successor failed")
 		return err
 	}
+	fmt.Println("FindSuccessorRPC recieve result: ", result)
 	//update fingertable(next)
 	/* 	if result.found {
 		node.FingerTable[node.next].Address = result.SuccessorAddress
