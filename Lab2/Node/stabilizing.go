@@ -93,11 +93,11 @@ func (node *Node) stabilize() error {
 	}
 	var fakeReply NotifyRPCReply
 	err = ChordCall(node.Successors[0], "Node.NotifyRPC", node.Address, &fakeReply)
-	if !fakeReply.Success {
+/* 	if !fakeReply.Success {
 		// fmt.Println("Notify failed: ", fakeReply.err)
 	} else {
 		// fmt.Println("Notify success")
-	}
+	} */
 	return nil
 }
 
