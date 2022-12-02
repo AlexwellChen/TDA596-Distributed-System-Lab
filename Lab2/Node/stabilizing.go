@@ -51,8 +51,8 @@ func (node *Node) stabilize() error {
 			}
 		}
 	}
-	var getPredecessorRPCRepy GetPredecessorRPCRepy
-	err = ChordCall(node.Successors[0], "Node.GetPredecessorRPC", struct{}{}, &getPredecessorRPCRepy)
+	var getPredecessorRPCReply GetPredecessorRPCReply
+	err = ChordCall(node.Successors[0], "Node.GetPredecessorRPC", struct{}{}, &getPredecessorRPCReply)
 	if err == nil {
 		// Get successor's name
 		var successorName string
@@ -65,7 +65,7 @@ func (node *Node) stabilize() error {
 		successorName = getSuccessorNameRPCReply.Name
 
 		// Get predecessor's name
-		predecessorAddr := getPredecessorRPCRepy.PredecessorAddress
+		predecessorAddr := getPredecessorRPCReply.PredecessorAddress
 		var getNameReply GetNameRPCReply
 		err = ChordCall(predecessorAddr, "Node.GetNameRPC", "", &getNameReply)
 		if err != nil {
@@ -73,7 +73,7 @@ func (node *Node) stabilize() error {
 			return err
 		}
 		predecessorName := getNameReply.Name
-		nodeId:= strHash(string(node.Name))
+		nodeId := strHash(string(node.Name))
 		nodeId.Mod(nodeId, hashMod)
 		predecessorId := strHash(string(predecessorName))
 		predecessorId.Mod(predecessorId, hashMod)
@@ -81,7 +81,7 @@ func (node *Node) stabilize() error {
 		successorId.Mod(successorId, hashMod)
 		if predecessorAddr != "" && between(nodeId,
 			predecessorId, successorId, false) {
-				/* fmt.Println(strHash(string(node.Name)),"and",
+			/* fmt.Println(strHash(string(node.Name)),"and",
 				strHash(string(predecessorName)), "and",strHash(string(successorName)))
 				fmt.Println(node.Identifier)
 				fmt.Println(strHash(string(node.Name)).Cmp(strHash(string(predecessorName))))
@@ -93,11 +93,11 @@ func (node *Node) stabilize() error {
 	}
 	var fakeReply NotifyRPCReply
 	err = ChordCall(node.Successors[0], "Node.NotifyRPC", node.Address, &fakeReply)
-/* 	if !fakeReply.Success {
-		// fmt.Println("Notify failed: ", fakeReply.err)
-	} else {
-		// fmt.Println("Notify success")
-	} */
+	/* 	if !fakeReply.Success {
+	   		// fmt.Println("Notify failed: ", fakeReply.err)
+	   	} else {
+	   		// fmt.Println("Notify success")
+	   	} */
 	return nil
 }
 
@@ -140,7 +140,7 @@ func (node *Node) fixFingers() error {
 	fmt.Println("*************** Invoke fixfinger function ***************")
 	node.next = node.next + 1
 	//use 0 to m-1, init next = -1, then use next+1 to 0
-	if node.next > fingerTableSize  {
+	if node.next > fingerTableSize {
 		node.next = 1
 	}
 	id := node.fingerEntry(node.next)
@@ -264,9 +264,32 @@ func (node *Node) notify(address NodeAddress) (bool, error) {
 
 }
 
+func (node *Node) moveFiles(addr NodeAddress) {
+	// Parse local bucket
+	addressId := strHash(string(addr))
+	addressId.Mod(addressId, hashMod)
+	for i := 0; i < len(node.Bucket); i++ {
+		fileId := strHash(node.Bucket[i])
+		fileId.Mod(fileId, hashMod)
+		if between(node.Identifier, fileId, addressId, false) {
+			//move file to new node
+			var moveFileRPCReply StoreFileRPCReply
+			// Move local file to new predecessor using storeFile function
+			err := ChordCall(addr, "Node.StoreFileRPC", node.Bucket[i], &moveFileRPCReply)
+			if err != nil {
+				fmt.Println("Move file failed: ", err)
+			}
+			//delete file from local bucket
+			node.Bucket = append(node.Bucket[:i], node.Bucket[i+1:]...)
+			i--
+		}
+	}
+}
+
 // TODO: check if the notifyrpc function is correct
 func (node *Node) NotifyRPC(address NodeAddress, reply *NotifyRPCReply) error {
 	// fmt.Println("---------------- Invoke NotifyRPC function ------------------")
+	node.moveFiles(address)
 	reply.Success, reply.err = node.notify(address)
 	return nil
 }
@@ -288,7 +311,7 @@ func (node *Node) GetSuccessorListRPC(none *struct{}, reply *GetSuccessorListRPC
 	return nil
 }
 
-type GetPredecessorRPCRepy struct {
+type GetPredecessorRPCReply struct {
 	PredecessorAddress NodeAddress
 }
 
@@ -297,7 +320,7 @@ func (node *Node) getPredecessor() NodeAddress {
 	// fmt.Println("************** Invoke getPredecessor function ***************")
 	return node.Predecessor
 }
-func (node *Node) GetPredecessorRPC(none *struct{}, reply *GetPredecessorRPCRepy) error {
+func (node *Node) GetPredecessorRPC(none *struct{}, reply *GetPredecessorRPCReply) error {
 	// fmt.Println("------------- Invoke GetPredecessorRPC function -------------")
 	reply.PredecessorAddress = node.getPredecessor()
 	if reply.PredecessorAddress == "" {

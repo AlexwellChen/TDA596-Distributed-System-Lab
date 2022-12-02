@@ -52,7 +52,8 @@ type Node struct {
 	PrivateKey *rsa.PrivateKey
 	PublicKey  *rsa.PublicKey
 
-	Bucket map[string]string // Hash Key -> File name value store
+	Bucket []string
+	// Bucket map[string]string // Hash Key -> File name value store
 	/* Exp:
 	     ------------Store File-------------
 	     	Hash(Hello.txt) -> 123
@@ -90,7 +91,8 @@ func NewNode(args Arguments) *Node {
 	node.next = 0 // start from -1, then use fixFingers() to add 1 -> 0 max: m-1
 	node.Predecessor = ""
 	node.Successors = make([]NodeAddress, args.Successors)
-	node.Bucket = make(map[string]string)
+	// TODO: How to set the size of the bucket?
+	node.Bucket = make([]string, 100)
 	node.generateRSAKey(2048)
 	node.initFingerTable()
 	node.initSuccessors()
@@ -144,7 +146,11 @@ func (node *Node) joinChord(joinNode NodeAddress) error {
 	if err != nil {
 		return err
 	}
-
+	// 2. Call the successor's notify() to notify the successor that the node is its predecessor
+	err = ChordCall(node.Successors[0], "Node.NotifyRPC", node.Address, &reply)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -159,9 +165,7 @@ func (node *Node) createChord() {
 }
 
 func (node *Node) leaveChord() {
-	// Todo: Leave the Chord ring
-	// For failure handling, backup the data in the bucket to the successor (Bonus)
-
+	// Todo: What fault tolerance should be considered? unexpected node failure or user exit?
 }
 
 func (node *Node) printState() {
@@ -214,7 +218,8 @@ func (node *Node) SetPredecessorRPC(predecessorAddress NodeAddress, reply *SetPr
 func (node *Node) storeFile(f FileRPC) bool {
 	// Store the file in the bucket
 	// Return true if success, false if failed
-	node.Bucket[f.Id.String()] = f.Name
+	// Append the file to the bucket
+	node.Bucket = append(node.Bucket, f.Name)
 	filepath := "../file_download/" + f.Name
 	// Create the file on file path and store content
 	file, err := os.Create(filepath)
@@ -234,16 +239,16 @@ func (node *Node) storeFile(f FileRPC) bool {
 
 type StoreFileRPCReply struct {
 	Success bool
-	err     error
+	Err     error
 }
 
 func (node *Node) StoreFileRPC(f FileRPC, reply *StoreFileRPCReply) error {
 	fmt.Println("-------------- Invoke StoreFileRPC function ------------")
 	reply.Success = node.storeFile(f)
 	if !reply.Success {
-		reply.err = errors.New("store file failed")
+		reply.Err = errors.New("store file failed")
 	} else {
-		reply.err = nil
+		reply.Err = nil
 	}
 	return nil
 }

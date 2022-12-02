@@ -228,13 +228,11 @@ func clientStoreFile(fileName string, node *Node) error {
 	if err != nil {
 		return err
 	} else {
-		// TODO: implement ChordRPC.StoreFile()
 		reply := new(StoreFileRPCReply)
 		err = ChordCall(addr, "Node.StoreFileRPC", newFile, &reply)
-		if reply.err != nil {
-			return err
+		if reply.Err != nil && err != nil {
+			return errors.New("cannot store the file")
 		}
 	}
-
 	return nil
 }
