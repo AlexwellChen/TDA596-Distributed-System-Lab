@@ -4,7 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"net/rpc"
+	//"net/rpc"
+	"net/rpc/jsonrpc"
 )
 
 /*
@@ -17,11 +18,9 @@ import (
 
 // verifies n’s immediate
 func (node *Node) stabilize() error {
-	//Todo: search paper 看看是每个successor都要修改prodecessor还是只修改第一个successor
-	//Todo: search paper 看看是不是要fix successorList
 	//??Truncate the list if needed so it is not too long
 	//??(measuring it against the maximum length discussed above).
-	// fmt.Println("***************** Invoke stabilize function *****************")
+	fmt.Println("***************** Invoke stabilize function *****************")
 	//node.Successors[0] = node.getSuccessor()
 	var getSuccessorListRPCReply GetSuccessorListRPCReply
 	//fmt.Println("node.Successors: ", node.Successors[0])
@@ -104,28 +103,24 @@ func (node *Node) stabilize() error {
 
 // check whether predecessor has failed
 func (node *Node) checkPredecessor() error {
-	// fmt.Println("************* Invoke checkPredecessor function **************")
+	fmt.Println("************* Invoke checkPredecessor function **************")
 	pred := node.Predecessor
 	if pred != "" {
 		//check connection
-		client, err := rpc.Dial("tcp", string(pred))
+		_, err := jsonrpc.Dial("tcp", string(pred))
 		//if connection failed, set predecessor to nil
 		if err != nil {
 			fmt.Printf("Predecessor %s has failed\n", string(pred))
 			node.Predecessor = ""
-			client.Close()
-		} else {
-			client.Close()
 		}
+		//defer client.Close()
 	}
 	return nil
 }
 
 // calculate (n + 2^(k-1) ) mod 2^m
 func (node *Node) fingerEntry(fingerentry int) *big.Int {
-	//Todo: check if use len(node.Address) or fingerTableSize
-	// fmt.Println("************** Invoke fingerEntry function ******************")
-	// 2^m ? use len(node.Address)
+	//fmt.Println("************** Invoke fingerEntry function ******************")
 	//var hashMod = new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(len(node.FingerTable)-1)), nil)
 	// id = n (node n identifier)
 	id := node.Identifier
@@ -142,8 +137,7 @@ func (node *Node) fingerEntry(fingerentry int) *big.Int {
 
 // refreshes finger table entries, next stores the index of the next finger to fix
 func (node *Node) fixFingers() error {
-	//Todo: search paper check node.next 在到了m的时候是不是要从1开始还是0，以及初始化
-	// fmt.Println("*************** Invoke findSuccessor function ***************")
+	fmt.Println("*************** Invoke fixfinger function ***************")
 	node.next = node.next + 1
 	//use 0 to m-1, init next = -1, then use next+1 to 0
 	if node.next > fingerTableSize  {
@@ -166,7 +160,7 @@ func (node *Node) fixFingers() error {
 	var getSuccessorNameRPCReply GetNameRPCReply
 	err = ChordCall(result.SuccessorAddress, "Node.GetNameRPC", "", &getSuccessorNameRPCReply)
 	if err != nil {
-		fmt.Println("Get successor name failed")
+		fmt.Println("Fix finger get successor name failed")
 		return err
 	}
 	//fmt.Println("FingerTable[", node.next, "] = ", getSuccessorNameRPCReply.Name)
@@ -223,7 +217,7 @@ type NotifyRPCReply struct {
 
 // 'address' thinks it might be our predecessor
 func (node *Node) notify(address NodeAddress) (bool, error) {
-	// fmt.Println("***************** Invoke notify function ********************")
+	fmt.Println("***************** Invoke notify function ********************")
 	//if (predecessor is nil or n' ∈ (predecessor, n))
 	// Get predecessor name
 	if node.Predecessor != "" {
