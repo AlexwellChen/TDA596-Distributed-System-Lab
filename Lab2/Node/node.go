@@ -252,3 +252,16 @@ func (node *Node) StoreFileRPC(f FileRPC, reply *StoreFileRPCReply) error {
 	}
 	return nil
 }
+
+func (node *Node) encryptFile(content []byte) []byte {
+	// Encrypt the file
+	// Return the encrypted file
+	// Encrypt the file content
+	publicKey := node.PublicKey
+	encryptedContent, err := rsa.EncryptPKCS1v15(rand.Reader, publicKey, content)
+	if err != nil {
+		fmt.Println("Encrypt file failed")
+		return nil
+	}
+	return encryptedContent
+}

@@ -21,7 +21,7 @@ import (
 func (node *Node) stabilize() error {
 	//??Truncate the list if needed so it is not too long
 	//??(measuring it against the maximum length discussed above).
-	fmt.Println("***************** Invoke stabilize function *****************")
+	// fmt.Println("***************** Invoke stabilize function *****************")
 	//node.Successors[0] = node.getSuccessor()
 	var getSuccessorListRPCReply GetSuccessorListRPCReply
 	//fmt.Println("node.Successors: ", node.Successors[0])
@@ -104,7 +104,7 @@ func (node *Node) stabilize() error {
 
 // check whether predecessor has failed
 func (node *Node) checkPredecessor() error {
-	fmt.Println("************* Invoke checkPredecessor function **************")
+	// fmt.Println("************* Invoke checkPredecessor function **************")
 	pred := node.Predecessor
 	if pred != "" {
 		//check connection
@@ -138,7 +138,7 @@ func (node *Node) fingerEntry(fingerentry int) *big.Int {
 
 // refreshes finger table entries, next stores the index of the next finger to fix
 func (node *Node) fixFingers() error {
-	fmt.Println("*************** Invoke fixfinger function ***************")
+	// fmt.Println("*************** Invoke fixfinger function ***************")
 	node.next = node.next + 1
 	//use 0 to m-1, init next = -1, then use next+1 to 0
 	if node.next > fingerTableSize {
@@ -152,7 +152,7 @@ func (node *Node) fixFingers() error {
 		fmt.Println("Find successor failed")
 		return err
 	}
-	fmt.Println("FindSuccessorRPC recieve result: ", result)
+	// fmt.Println("FindSuccessorRPC recieve result: ", result)
 	//update fingertable(next)
 	/* 	if result.found {
 		node.FingerTable[node.next].Address = result.SuccessorAddress
@@ -219,7 +219,7 @@ type NotifyRPCReply struct {
 
 // 'address' thinks it might be our predecessor
 func (node *Node) notify(address NodeAddress) (bool, error) {
-	fmt.Println("***************** Invoke notify function ********************")
+	// fmt.Println("***************** Invoke notify function ********************")
 	//if (predecessor is nil or n' ∈ (predecessor, n))
 	// Get predecessor name
 	if node.Predecessor != "" {
@@ -291,7 +291,7 @@ func (node *Node) moveFiles(addr NodeAddress) {
 // TODO: check if the notifyrpc function is correct
 func (node *Node) NotifyRPC(address NodeAddress, reply *NotifyRPCReply) error {
 	// fmt.Println("---------------- Invoke NotifyRPC function ------------------")
-	node.moveFiles(address)
+	// node.moveFiles(address)
 	reply.Success, reply.Err = node.notify(address)
 	return nil
 }
