@@ -214,7 +214,7 @@ func (node *Node) fixFingers() error {
 // -------------------------- NotifyRPC ----------------------------
 type NotifyRPCReply struct {
 	Success bool
-	err     error
+	Err     error
 }
 
 // 'address' thinks it might be our predecessor
@@ -292,7 +292,7 @@ func (node *Node) moveFiles(addr NodeAddress) {
 func (node *Node) NotifyRPC(address NodeAddress, reply *NotifyRPCReply) error {
 	// fmt.Println("---------------- Invoke NotifyRPC function ------------------")
 	node.moveFiles(address)
-	reply.Success, reply.err = node.notify(address)
+	reply.Success, reply.Err = node.notify(address)
 	return nil
 }
 
