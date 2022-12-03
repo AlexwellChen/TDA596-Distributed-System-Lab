@@ -51,8 +51,8 @@ type Node struct {
 	// For Chord data encryption
 	PrivateKey *rsa.PrivateKey
 	PublicKey  *rsa.PublicKey
-
-	Bucket []string
+	// Create bucket in form of map
+	Bucket map[*big.Int]string
 	// Bucket map[string]string // Hash Key -> File name value store
 	/* Exp:
 	     ------------Store File-------------
@@ -88,11 +88,10 @@ func NewNode(args Arguments) *Node {
 	node.Identifier = strHash(string(node.Name))
 	node.Identifier.Mod(node.Identifier, hashMod)
 	node.FingerTable = make([]fingerEntry, fingerTableSize+1)
+	node.Bucket = make(map[*big.Int]string)
 	node.next = 0 // start from -1, then use fixFingers() to add 1 -> 0 max: m-1
 	node.Predecessor = ""
 	node.Successors = make([]NodeAddress, args.Successors)
-	// TODO: How to set the size of the bucket?
-	node.Bucket = make([]string, 100)
 	node.generateRSAKey(2048)
 	node.initFingerTable()
 	node.initSuccessors()
@@ -219,7 +218,9 @@ func (node *Node) storeFile(f FileRPC) bool {
 	// Store the file in the bucket
 	// Return true if success, false if failed
 	// Append the file to the bucket
-	node.Bucket = append(node.Bucket, f.Name)
+	f.Id.Mod(f.Id, hashMod)
+	node.Bucket[f.Id] = f.Name
+	fmt.Println("Bucket: ", node.Bucket)
 	filepath := "../file_download/" + f.Name
 	// Create the file on file path and store content
 	file, err := os.Create(filepath)

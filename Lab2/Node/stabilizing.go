@@ -6,7 +6,9 @@ import (
 	"math/big"
 
 	//"net/rpc"
+	"io/ioutil"
 	"net/rpc/jsonrpc"
+	"os"
 )
 
 /*
@@ -266,24 +268,38 @@ func (node *Node) notify(address NodeAddress) (bool, error) {
 
 }
 
+// TODO: Add return for moveFiles function
 func (node *Node) moveFiles(addr NodeAddress) {
 	// Parse local bucket
 	addressId := strHash(string(addr))
 	addressId.Mod(addressId, hashMod)
-	for i := 0; i < len(node.Bucket); i++ {
-		fileId := strHash(node.Bucket[i])
-		fileId.Mod(fileId, hashMod)
+	for key, element := range node.Bucket {
+		fileId := key
+		fileName := element
+		filepath := "../file_upload/" + fileName
+		file, err := os.Open(filepath)
+		if err != nil {
+			fmt.Println("Cannot open the file")
+		}
+		defer file.Close()
+		// Init new file struct and put content into it
+		newFile := FileRPC{}
+		newFile.Name = fileName
+		newFile.Content, err = ioutil.ReadAll(file)
+		if err != nil {
+			fmt.Println("Cannot read the file")
+		}
+		newFile.Id = key
 		if between(node.Identifier, fileId, addressId, false) {
 			//move file to new node
 			var moveFileRPCReply StoreFileRPCReply
 			// Move local file to new predecessor using storeFile function
-			err := ChordCall(addr, "Node.StoreFileRPC", node.Bucket[i], &moveFileRPCReply)
+			err := ChordCall(addr, "Node.StoreFileRPC", newFile, &moveFileRPCReply)
 			if err != nil {
 				fmt.Println("Move file failed: ", err)
 			}
 			//delete file from local bucket
-			node.Bucket = append(node.Bucket[:i], node.Bucket[i+1:]...)
-			i--
+			delete(node.Bucket, key)
 		}
 	}
 }

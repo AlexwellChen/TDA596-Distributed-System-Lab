@@ -40,9 +40,6 @@ func HandleConnection(listener *net.TCPListener, node *Node) {
 		if err != nil {
 			fmt.Println("Accept failed:", err.Error())
 			continue
-		} else {
-			// When stablize, too much print
-			// fmt.Println("Accept success")
 		}
 		go jsonrpc.ServeConn(conn)
 	}
