@@ -95,7 +95,7 @@ func (node *Node) stabilize() error {
 			node.Successors[0] = predecessorAddr
 		}
 	}
-	fmt.Println("------------DO COPY NODE BUCKET TO SUCCESSOR[0]------------")
+	// fmt.Println("------------DO COPY NODE BUCKET TO SUCCESSOR[0]------------")
 	deleteSuccessorBackupRPCReply := DeleteSuccessorBackupRPCReply{}
 	err = ChordCall(node.Successors[0], "Node.DeleteSuccessorBackupRPC", struct{}{}, &deleteSuccessorBackupRPCReply)
 	if err != nil {
@@ -117,7 +117,7 @@ func (node *Node) stabilize() error {
 		if v != "" {
 			//fmt.Println("lastValue and v: ", lastValue, "and", v)
 			lastValue = v
-			filepath := "../files/" + node.Name + "/file_upload/" + v
+			filepath := "../files/" + node.Name + "/chord_storage/" + v
 			file, err := os.Open(filepath)
 			if err != nil {
 				fmt.Println("Copy to backup: open file failed: ", err)
@@ -128,11 +128,11 @@ func (node *Node) stabilize() error {
 			if err != nil {
 				fmt.Println("Copy to backup: read file failed: ", err)
 				return err
-			}else{
+			} else {
 				//TODO: check if need encrypt??
 				reply := new(SuccessorStoreFileRPCReply)
 				err = ChordCall(node.Successors[0], "Node.SuccessorStoreFileRPC", newFile, &reply)
-				if reply.Err != nil && err != nil{
+				if reply.Err != nil && err != nil {
 					fmt.Println("Copy to backup: store file failed: ", reply.Err, " and ", err)
 				}
 			}
@@ -416,24 +416,23 @@ func (node *Node) DeleteSuccessorBackupRPC(none *struct{}, reply *DeleteSuccesso
 	return nil
 }
 
-
-func(node *Node) successorStoreFile(f FileRPC) bool {
+func (node *Node) successorStoreFile(f FileRPC) bool {
 	//fmt.Println("************** Invoke successorStoreFile function ***************")
 	// Store file in successor's backup
 	f.Id.Mod(f.Id, hashMod)
 	node.Backup[f.Id] = f.Name
 	//fmt.Println("File", f.Name, "is stored in", node.Name, "'s backup")
-	fmt.Println("Backup: ", node.Backup)
+	// fmt.Println("Backup: ", node.Backup)
 	return true
 }
 
 type SuccessorStoreFileRPCReply struct {
 	Success bool
-	Err    error
+	Err     error
 }
 
 func (node *Node) SuccessorStoreFileRPC(f FileRPC, reply *SuccessorStoreFileRPCReply) error {
-	fmt.Println("------------- Invoke SuccessorStoreFileRPC function -------------")
+	// fmt.Println("------------- Invoke SuccessorStoreFileRPC function -------------")
 	reply.Success = node.successorStoreFile(f)
 	if !reply.Success {
 		reply.Err = errors.New("store file failed")

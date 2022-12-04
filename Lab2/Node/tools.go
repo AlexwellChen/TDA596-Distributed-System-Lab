@@ -266,7 +266,7 @@ func clientGetFile(fileName string, node *Node) error {
 		// Decrypt file content
 		file.Content = node.decryptFile(file.Content)
 		// Write file to local
-		success := node.storeFile(file)
+		success := node.storeLocalFile(file)
 		if !success {
 			return errors.New("cannot store the file")
 		}

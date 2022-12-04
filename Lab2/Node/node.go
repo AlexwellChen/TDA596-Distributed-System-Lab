@@ -116,9 +116,27 @@ func NewNode(args Arguments) *Node {
 			} else {
 				fmt.Println("file_download folder already exist")
 			}
+			// Create chord_storage folder in Node folder
+			if _, err := os.Stat("../files/" + node.Name + "/chord_storage"); os.IsNotExist(err) {
+				os.Mkdir("../files/"+node.Name+"/chord_storage", 0777)
+			} else {
+				fmt.Println("chord_storage folder already exist")
+			}
 		}
 	} else {
 		fmt.Println("Node folder already exist")
+		// Init bucket
+		// Read all files in chord_storage folder
+		files, err := ioutil.ReadDir("../files/" + node.Name + "/chord_storage")
+		if err != nil {
+			fmt.Println("Read chord_storage folder failed")
+		}
+		for _, file := range files {
+			// Store file name in bucket
+			fileId := strHash(file.Name())
+			fileId.Mod(fileId, hashMod)
+			node.Bucket[fileId] = file.Name()
+		}
 	}
 	return node
 }
@@ -218,7 +236,7 @@ func (node *Node) printState() {
 	for k, v := range node.Backup {
 		fmt.Println("Key: ", k, ", Value: ", v)
 	}
-		
+
 }
 
 /*------------------------------------------------------------*/
@@ -248,7 +266,32 @@ func (node *Node) SetPredecessorRPC(predecessorAddress NodeAddress, reply *SetPr
 	return nil
 }
 
-func (node *Node) storeFile(f FileRPC) bool {
+func (node *Node) storeChordFile(f FileRPC) bool {
+	// Store the file in the bucket
+	// Return true if success, false if failed
+	// Append the file to the bucket
+	f.Id.Mod(f.Id, hashMod)
+	node.Bucket[f.Id] = f.Name
+	fmt.Println("Bucket: ", node.Bucket)
+	currentNodeFileDownloadPath := "../files/" + node.Name + "/chord_storage/"
+	filepath := currentNodeFileDownloadPath + f.Name
+	// Create the file on file path and store content
+	file, err := os.Create(filepath)
+	if err != nil {
+		fmt.Println("Create file failed")
+		return false
+	}
+	defer file.Close()
+	_, err = file.Write(f.Content)
+	if err != nil {
+		fmt.Println("Write file failed")
+		return false
+	}
+	// Store the file in the file download folder
+	return true
+}
+
+func (node *Node) storeLocalFile(f FileRPC) bool {
 	// Store the file in the bucket
 	// Return true if success, false if failed
 	// Append the file to the bucket
@@ -280,7 +323,7 @@ type StoreFileRPCReply struct {
 
 func (node *Node) StoreFileRPC(f FileRPC, reply *StoreFileRPCReply) error {
 	fmt.Println("-------------- Invoke StoreFileRPC function ------------")
-	reply.Success = node.storeFile(f)
+	reply.Success = node.storeChordFile(f)
 	if !reply.Success {
 		reply.Err = errors.New("store file failed")
 	} else {
@@ -296,6 +339,7 @@ func (node *Node) GetFileRPC(f FileRPC, reply *FileRPC) error {
 	f.Id.Mod(f.Id, hashMod)
 	fmt.Println("Get file id: ", f.Id)
 	fileName, ok := node.Bucket[f.Id]
+	fmt.Println("Get file status: ", fileName, " ", ok)
 	if !ok {
 		// Print bucket
 		fmt.Println("Bucket: ", node.Bucket)
@@ -303,7 +347,7 @@ func (node *Node) GetFileRPC(f FileRPC, reply *FileRPC) error {
 	}
 
 	// Read the file from the file download folder
-	currentNodeFileDownloadPath := "../files/" + node.Name + "/file_download/"
+	currentNodeFileDownloadPath := "../files/" + node.Name + "/chord_storage/"
 	filepath := currentNodeFileDownloadPath + fileName
 	file, err := os.Open(filepath)
 	if err != nil {
