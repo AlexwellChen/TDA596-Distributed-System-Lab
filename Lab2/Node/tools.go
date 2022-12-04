@@ -190,7 +190,7 @@ func between(start, elt, end *big.Int, inclusive bool) bool {
 func clientLookUp(key string, node *Node) (NodeAddress, error) {
 	// Find the successor of key
 	// Return the successor's address and port
-	newKey := strHash(key)
+	newKey := strHash(key + node.Name) // Use file name + node name as key
 	addr := find(newKey, node.Address)
 	if addr == "-1" {
 		return "", errors.New("cannot find the store position of the key")
@@ -216,7 +216,8 @@ func clientStoreFile(fileName string, node *Node) error {
 		fmt.Println("The file is stored in node: ", addr)
 	}
 	// Open file and pack into fileRPC
-	filepath := "../file_upload/" + fileName
+	currentNodeFileUploadPath := "../files/" + node.Name + "/file_upload/"
+	filepath := currentNodeFileUploadPath + fileName
 	file, err := os.Open(filepath)
 	if err != nil {
 		fmt.Println("Cannot open the file")

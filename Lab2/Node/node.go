@@ -95,6 +95,28 @@ func NewNode(args Arguments) *Node {
 	node.generateRSAKey(2048)
 	node.initFingerTable()
 	node.initSuccessors()
+	// Create Node folder in upper directory
+	if _, err := os.Stat("../files/" + node.Name); os.IsNotExist(err) {
+		err := os.Mkdir("../files/"+node.Name, 0777)
+		if err != nil {
+			fmt.Println("Create Node folder failed")
+		} else {
+			// Create file_upload folder in Node folder
+			if _, err := os.Stat("../files/" + node.Name + "/file_upload"); os.IsNotExist(err) {
+				os.Mkdir("../files/"+node.Name+"/file_upload", 0777)
+			} else {
+				fmt.Println("file_upload folder already exist")
+			}
+			// Create file_download folder in Node folder
+			if _, err := os.Stat("../files/" + node.Name + "/file_download"); os.IsNotExist(err) {
+				os.Mkdir("../files/"+node.Name+"/file_download", 0777)
+			} else {
+				fmt.Println("file_download folder already exist")
+			}
+		}
+	} else {
+		fmt.Println("Node folder already exist")
+	}
 	return node
 }
 
@@ -221,7 +243,8 @@ func (node *Node) storeFile(f FileRPC) bool {
 	f.Id.Mod(f.Id, hashMod)
 	node.Bucket[f.Id] = f.Name
 	fmt.Println("Bucket: ", node.Bucket)
-	filepath := "../file_download/" + f.Name
+	currentNodeFileDownloadPath := "../files/" + node.Name + "/file_download/"
+	filepath := currentNodeFileDownloadPath + f.Name
 	// Create the file on file path and store content
 	file, err := os.Create(filepath)
 	if err != nil {
