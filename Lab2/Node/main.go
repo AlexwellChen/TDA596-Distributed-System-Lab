@@ -99,7 +99,7 @@ func main() {
 		// Start periodic tasks
 		se_stab := ScheduledExecutor{delay: time.Duration(Arguments.Stabilize) * time.Millisecond, quit: make(chan int)}
 		se_stab.Start(func() {
-			node.stabilize()
+			node.stablize()
 		})
 
 		se_ff := ScheduledExecutor{delay: time.Duration(Arguments.FixFingers) * time.Millisecond, quit: make(chan int)}

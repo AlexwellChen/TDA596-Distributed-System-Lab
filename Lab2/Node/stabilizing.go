@@ -21,10 +21,10 @@ import (
 */
 
 // verifies n’s immediate
-func (node *Node) stabilize() error {
+func (node *Node) stablize() error {
 	//??Truncate the list if needed so it is not too long
 	//??(measuring it against the maximum length discussed above).
-	// fmt.Println("***************** Invoke stabilize function *****************")
+	// fmt.Println("***************** Invoke stablize function *****************")
 	//node.Successors[0] = node.getSuccessor()
 	var getSuccessorListRPCReply GetSuccessorListRPCReply
 	//fmt.Println("node.Successors: ", node.Successors[0])
@@ -200,9 +200,10 @@ func (node *Node) fixFingers() error {
 	// Unlock node.next
 	mutex.Unlock()
 
-	//use 0 to m-1, init next = -1, then use next+1 to 0
 	if node.next > fingerTableSize {
+		mutex.Lock()
 		node.next = 1
+		mutex.Unlock()
 	}
 	id := node.fingerEntry(node.next)
 	//find successor of id
@@ -222,6 +223,7 @@ func (node *Node) fixFingers() error {
 	var getSuccessorNameRPCReply GetNameRPCReply
 	err = ChordCall(result.SuccessorAddress, "Node.GetNameRPC", "", &getSuccessorNameRPCReply)
 	if err != nil {
+		fmt.Println("node.Next: ", node.next)
 		fmt.Println("Fix finger get successor name failed")
 		return err
 	}
@@ -238,10 +240,14 @@ func (node *Node) fixFingers() error {
 	   		} */
 	//optimization, update other finger table entries use the first successor
 	for {
+		mutex.Lock()
 		node.next = node.next + 1
+		mutex.Unlock()
 		if node.next > fingerTableSize {
 			// we have updated all entries, set to -1
+			mutex.Lock()
 			node.next = 0
+			mutex.Unlock()
 			return nil
 		}
 		id := node.fingerEntry(node.next)
@@ -261,7 +267,9 @@ func (node *Node) fixFingers() error {
 				fmt.Println("FingerTable[", node.next, "] = ", result.SuccessorAddress)
 			}
 		} else {
+			mutex.Lock()
 			node.next--
+			mutex.Unlock()
 			return nil
 		}
 	}
@@ -334,7 +342,7 @@ func (node *Node) moveFiles(addr NodeAddress) {
 	for key, element := range node.Bucket {
 		fileId := key
 		fileName := element
-		filepath := "../file_upload/" + fileName
+		filepath := "../files/" + node.Name + "/chord_storage/" + fileName
 		file, err := os.Open(filepath)
 		if err != nil {
 			fmt.Println("Cannot open the file")
@@ -358,6 +366,11 @@ func (node *Node) moveFiles(addr NodeAddress) {
 			}
 			//delete file from local bucket
 			delete(node.Bucket, key)
+			// delete file from local directory
+			err = os.Remove(filepath)
+			if err != nil {
+				fmt.Println("Cannot delete the file")
+			}
 		}
 	}
 }
@@ -365,7 +378,7 @@ func (node *Node) moveFiles(addr NodeAddress) {
 // TODO: check if the notifyrpc function is correct
 func (node *Node) NotifyRPC(address NodeAddress, reply *NotifyRPCReply) error {
 	// fmt.Println("---------------- Invoke NotifyRPC function ------------------")
-	// node.moveFiles(address)
+	node.moveFiles(address)
 	reply.Success, reply.Err = node.notify(address)
 	return nil
 }
@@ -412,8 +425,20 @@ type DeleteSuccessorBackupRPCReply struct {
 
 func (node *Node) deleteSuccessorBackup() bool {
 	// fmt.Println("************** Invoke deleteSuccessorBackup function ***************")
+	// // Delete backup files first
+	// backupPath := "../files/" + node.Name + "/chord_storage/"
+	// // Read file names from node.Backup
+	// for _, fileName := range node.Backup {
+	// 	filepath := backupPath + fileName
+	// 	err := os.Remove(filepath)
+	// 	if err != nil {
+	// 		fmt.Println("Cannot delete file: ", fileName)
+	// 	}
+	// }
+	// Clear node.Backup
 	node.Backup = make(map[*big.Int]string)
 	//fmt.Println("Backup is deleted : ", node.Backup)
+
 	return true
 }
 

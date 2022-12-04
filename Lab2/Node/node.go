@@ -19,7 +19,7 @@ import (
 // Main function + Node defination :Qi
 
 // Test with 10 nodes on Chord ring, finger table size should larger than 5
-var fingerTableSize = 6 // Each finger table i contains the id of (n + 2^i) mod (2^m)th node. Use [0, 5] as i and space would be [(n+1)%64, (n+32)%64]
+var fingerTableSize = 6 // Each finger table i contains the id of (n + 2^i) mod (2^m)th node. Use [1, 6] as i and space would be [(n+1)%64, (n+32)%64]
 var m = 6               // Chord space has 2^6 = 64 identifiers
 
 // 2^m
@@ -127,6 +127,11 @@ func NewNode(args Arguments) *Node {
 	}
 	node.Identifier = strHash(string(node.Name))
 	node.Identifier.Mod(node.Identifier, hashMod)
+	if node.Identifier.Cmp(big.NewInt(0)) == 0 {
+		// Identifier should not be 0, exit os
+		fmt.Println("Node identifier should not be 0, try another name")
+		os.Exit(1)
+	}
 	node.FingerTable = make([]fingerEntry, fingerTableSize+1)
 	node.Bucket = make(map[*big.Int]string)
 	node.Backup = make(map[*big.Int]string)
