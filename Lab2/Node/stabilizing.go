@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"sync"
 
 	//"net/rpc"
 	"io/ioutil"
@@ -141,7 +142,14 @@ func (node *Node) fingerEntry(fingerentry int) *big.Int {
 // refreshes finger table entries, next stores the index of the next finger to fix
 func (node *Node) fixFingers() error {
 	// fmt.Println("*************** Invoke fixfinger function ***************")
+
+	// Lock node.next
+	var mutex sync.Mutex
+	mutex.Lock()
 	node.next = node.next + 1
+	// Unlock node.next
+	mutex.Unlock()
+
 	//use 0 to m-1, init next = -1, then use next+1 to 0
 	if node.next > fingerTableSize {
 		node.next = 1

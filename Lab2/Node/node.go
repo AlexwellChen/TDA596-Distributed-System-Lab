@@ -5,6 +5,7 @@ import (
 	"crypto/rsa"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"math/big"
 	"os"
 )
@@ -277,6 +278,38 @@ func (node *Node) StoreFileRPC(f FileRPC, reply *StoreFileRPCReply) error {
 	return nil
 }
 
+func (node *Node) GetFileRPC(f FileRPC, reply *FileRPC) error {
+	fmt.Println("-------------- Invoke GetFileRPC function ------------")
+	// Get the file from the bucket
+	// Return the file if success, return error if failed
+	f.Id.Mod(f.Id, hashMod)
+	fmt.Println("Get file id: ", f.Id)
+	fileName, ok := node.Bucket[f.Id]
+	if !ok {
+		// Print bucket
+		fmt.Println("Bucket: ", node.Bucket)
+		return errors.New("file not found")
+	}
+
+	// Read the file from the file download folder
+	currentNodeFileDownloadPath := "../files/" + node.Name + "/file_download/"
+	filepath := currentNodeFileDownloadPath + fileName
+	file, err := os.Open(filepath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	fileContent, err := ioutil.ReadAll(file)
+	if err != nil {
+		return err
+	}
+	// Return the file
+	reply.Id = f.Id
+	reply.Name = fileName
+	reply.Content = fileContent
+	return nil
+}
+
 func (node *Node) encryptFile(content []byte) []byte {
 	// Encrypt the file
 	// Return the encrypted file
@@ -288,4 +321,17 @@ func (node *Node) encryptFile(content []byte) []byte {
 		return nil
 	}
 	return encryptedContent
+}
+
+func (node *Node) decryptFile(content []byte) []byte {
+	// Decrypt the file
+	// Return the decrypted file
+	// Decrypt the file content
+	privateKey := node.PrivateKey
+	decryptedContent, err := rsa.DecryptPKCS1v15(rand.Reader, privateKey, content)
+	if err != nil {
+		fmt.Println("Decrypt file failed")
+		return nil
+	}
+	return decryptedContent
 }

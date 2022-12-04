@@ -115,6 +115,7 @@ func main() {
 		// Get user input for printing states
 		reader := bufio.NewReader(os.Stdin)
 		for {
+			fmt.Print("Enter command: ")
 			command, _ := reader.ReadString('\n')
 			command = strings.TrimSpace(command)
 			command = strings.ToUpper(command)
@@ -148,6 +149,17 @@ func main() {
 				se_ff.quit <- 1
 				se_cp.quit <- 1
 				os.Exit(0)
+			} else if command == "GET" || command == "G" {
+				// Get file from the network
+				fmt.Println("Please enter the file name you want to get")
+				fileName, _ := reader.ReadString('\n')
+				fileName = strings.TrimSpace(fileName)
+				err := clientGetFile(fileName, node)
+				if err != nil {
+					fmt.Print(err)
+				} else {
+					fmt.Println("Get file success")
+				}
 			} else {
 				fmt.Println("Invalid command")
 			}

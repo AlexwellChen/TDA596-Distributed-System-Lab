@@ -229,6 +229,7 @@ func clientStoreFile(fileName string, node *Node) error {
 	newFile.Name = fileName
 	newFile.Content, err = ioutil.ReadAll(file)
 	newFile.Id = strHash(fileName)
+	newFile.Id.Mod(newFile.Id, hashMod)
 	if err != nil {
 		return err
 	} else {
@@ -239,6 +240,37 @@ func clientStoreFile(fileName string, node *Node) error {
 		if reply.Err != nil && err != nil {
 			return errors.New("cannot store the file")
 		}
+	}
+	return nil
+}
+
+func clientGetFile(fileName string, node *Node) error {
+	addr, err := clientLookUp(fileName, node)
+	if err != nil {
+		return err
+	} else {
+		fmt.Println("The file is stored in node: ", addr)
+	}
+	// Open file and pack into fileRPC
+	// currentNodeFileDownloadPath := "../files/" + node.Name + "/file_download/"
+	// filepath := currentNodeFileDownloadPath + fileName
+	file := FileRPC{}
+	file.Name = fileName
+	file.Id = strHash(fileName)
+	file.Id.Mod(file.Id, hashMod)
+	err = ChordCall(addr, "Node.GetFileRPC", file, &file)
+	if err != nil {
+		fmt.Println("Cannot get the file")
+		return err
+	} else {
+		// Decrypt file content
+		file.Content = node.decryptFile(file.Content)
+		// Write file to local
+		success := node.storeFile(file)
+		if !success {
+			return errors.New("cannot store the file")
+		}
+
 	}
 	return nil
 }
