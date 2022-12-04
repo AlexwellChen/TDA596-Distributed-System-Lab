@@ -3,6 +3,8 @@ package main
 import (
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -76,6 +78,42 @@ func (node *Node) generateRSAKey(bits int) {
 	}
 	node.PrivateKey = privateKey
 	node.PublicKey = &privateKey.PublicKey
+
+	// Store private key in Node folder
+	priDerText := x509.MarshalPKCS1PrivateKey(privateKey)
+	block := pem.Block{
+		Type: node.Name + "-private Key",
+
+		Headers: nil,
+
+		Bytes: priDerText,
+	}
+	node_files_folder := "../files/" + node.Name
+	privateHandler, err := os.Create(node_files_folder + "/private.pem")
+	if err != nil {
+		panic(err)
+	}
+	defer privateHandler.Close()
+	pem.Encode(privateHandler, &block)
+
+	// Store public key in Node folder
+	pubDerText, err := x509.MarshalPKIXPublicKey(node.PublicKey)
+	if err != nil {
+		panic(err)
+	}
+	block = pem.Block{
+		Type: node.Name + "-public Key",
+
+		Headers: nil,
+
+		Bytes: pubDerText,
+	}
+	publicHandler, err := os.Create(node_files_folder + "/public.pem")
+	if err != nil {
+		panic(err)
+	}
+	defer publicHandler.Close()
+	pem.Encode(publicHandler, &block)
 }
 
 func NewNode(args Arguments) *Node {
@@ -95,7 +133,6 @@ func NewNode(args Arguments) *Node {
 	node.next = 0 // start from -1, then use fixFingers() to add 1 -> 0 max: m-1
 	node.Predecessor = ""
 	node.Successors = make([]NodeAddress, args.Successors)
-	node.generateRSAKey(2048)
 	node.initFingerTable()
 	node.initSuccessors()
 	// Create Node folder in upper directory
@@ -123,11 +160,38 @@ func NewNode(args Arguments) *Node {
 				fmt.Println("chord_storage folder already exist")
 			}
 		}
+		node.generateRSAKey(2048)
 	} else {
 		fmt.Println("Node folder already exist")
-		// No need to init bucket and backup
-		// We had encrypted them and the key change every time
+		// Init bucket
+		// Read all files in chord_storage folder
+		files, err := ioutil.ReadDir("../files/" + node.Name + "/chord_storage")
+		if err != nil {
+			fmt.Println("Read chord_storage folder failed")
+		}
+		for _, file := range files {
+			// Store file name in bucket
+			fileName := file.Name()
+			fileHash := strHash(fileName)
+			fileHash.Mod(fileHash, hashMod)
+			node.Bucket[fileHash] = fileName
+		}
+		// Init private key
+		privateHandler, err := os.Open("../files/" + node.Name + "/private.pem")
+		if err != nil {
+			panic(err)
+		}
+		defer privateHandler.Close()
+		privateKeyBuffer, err := ioutil.ReadAll(privateHandler)
+		priBlock, _ := pem.Decode(privateKeyBuffer)
+		privateKey, err := x509.ParsePKCS1PrivateKey(priBlock.Bytes)
+		if err != nil {
+			panic(err)
+		}
+		node.PrivateKey = privateKey
+		node.PublicKey = &node.PrivateKey.PublicKey
 	}
+
 	return node
 }
 
