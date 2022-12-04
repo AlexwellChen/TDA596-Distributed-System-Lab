@@ -356,7 +356,7 @@ func (node *Node) moveFiles(addr NodeAddress) {
 			fmt.Println("Cannot read the file")
 		}
 		newFile.Id = key
-		if between(node.Identifier, fileId, addressId, false) {
+		if between(fileId , addressId, node.Identifier, false) {
 			//move file to new node
 			var moveFileRPCReply StoreFileRPCReply
 			// Move local file to new predecessor using storeFile function
@@ -465,7 +465,7 @@ func (node *Node) successorStoreFile(f FileRPC) bool {
 		fmt.Println("Cannot write backup file")
 	}
 	//fmt.Println("File", f.Name, "is stored in", node.Name, "'s backup")
-	// fmt.Println("Backup: ", node.Backup)
+	fmt.Println("Stab Backup: ", node.Backup)
 	return true
 }
 

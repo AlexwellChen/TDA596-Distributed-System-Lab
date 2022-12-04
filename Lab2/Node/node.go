@@ -332,9 +332,10 @@ func (node *Node) storeChordFile(f FileRPC, backup bool) bool {
 	f.Id.Mod(f.Id, hashMod)
 	if backup {
 		node.Backup[f.Id] = f.Name
+		fmt.Println("Store Backup: ",node.Backup)
 	} else {
 		node.Bucket[f.Id] = f.Name
-		fmt.Println("Bucket: ", node.Bucket)
+		fmt.Println("Store Bucket: ", node.Bucket)
 	}
 	currentNodeFileDownloadPath := "../files/" + node.Name + "/chord_storage/"
 	filepath := currentNodeFileDownloadPath + f.Name
