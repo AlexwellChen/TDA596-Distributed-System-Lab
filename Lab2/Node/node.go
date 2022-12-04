@@ -125,18 +125,8 @@ func NewNode(args Arguments) *Node {
 		}
 	} else {
 		fmt.Println("Node folder already exist")
-		// Init bucket
-		// Read all files in chord_storage folder
-		files, err := ioutil.ReadDir("../files/" + node.Name + "/chord_storage")
-		if err != nil {
-			fmt.Println("Read chord_storage folder failed")
-		}
-		for _, file := range files {
-			// Store file name in bucket
-			fileId := strHash(file.Name())
-			fileId.Mod(fileId, hashMod)
-			node.Bucket[fileId] = file.Name()
-		}
+		// No need to init bucket and backup
+		// We had encrypted them and the key change every time
 	}
 	return node
 }
@@ -296,8 +286,6 @@ func (node *Node) storeLocalFile(f FileRPC) bool {
 	// Return true if success, false if failed
 	// Append the file to the bucket
 	f.Id.Mod(f.Id, hashMod)
-	node.Bucket[f.Id] = f.Name
-	fmt.Println("Bucket: ", node.Bucket)
 	currentNodeFileDownloadPath := "../files/" + node.Name + "/file_download/"
 	filepath := currentNodeFileDownloadPath + f.Name
 	// Create the file on file path and store content
