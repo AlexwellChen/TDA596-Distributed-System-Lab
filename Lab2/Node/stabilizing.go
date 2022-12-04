@@ -95,6 +95,49 @@ func (node *Node) stabilize() error {
 			node.Successors[0] = predecessorAddr
 		}
 	}
+	fmt.Println("------------DO COPY NODE BUCKET TO SUCCESSOR[0]------------")
+	deleteSuccessorBackupRPCReply := DeleteSuccessorBackupRPCReply{}
+	err = ChordCall(node.Successors[0], "Node.DeleteSuccessorBackupRPC", struct{}{}, &deleteSuccessorBackupRPCReply)
+	if err != nil {
+		fmt.Println("empty successor backup failed")
+		return err
+	}
+	lastValue := ""
+	for k, v := range node.Bucket {
+		newFile := FileRPC{}
+		newFile.Name = v
+		newFile.Id = k
+		//fmt.Println("lastValue: ", lastValue)
+		//fmt.Println("newFile.Name: ", newFile.Name)
+		// check loop
+		if v == lastValue {
+			//fmt.Println("Loop detected, break")
+			break
+		}
+		if v != "" {
+			//fmt.Println("lastValue and v: ", lastValue, "and", v)
+			lastValue = v
+			filepath := "../files/" + node.Name + "/file_upload/" + v
+			file, err := os.Open(filepath)
+			if err != nil {
+				fmt.Println("Copy to backup: open file failed: ", err)
+				return err
+			}
+			defer file.Close()
+			newFile.Content, err = ioutil.ReadAll(file) // check if need?
+			if err != nil {
+				fmt.Println("Copy to backup: read file failed: ", err)
+				return err
+			}else{
+				//TODO: check if need encrypt??
+				reply := new(SuccessorStoreFileRPCReply)
+				err = ChordCall(node.Successors[0], "Node.SuccessorStoreFileRPC", newFile, &reply)
+				if reply.Err != nil && err != nil{
+					fmt.Println("Copy to backup: store file failed: ", reply.Err, " and ", err)
+				}
+			}
+		}
+	}
 	var fakeReply NotifyRPCReply
 	ChordCall(node.Successors[0], "Node.NotifyRPC", node.Address, &fakeReply)
 	/* 	if !fakeReply.Success {
@@ -354,4 +397,48 @@ func (node *Node) GetPredecessorRPC(none *struct{}, reply *GetPredecessorRPCRepl
 	} else {
 		return nil
 	}
+}
+
+type DeleteSuccessorBackupRPCReply struct {
+	Success bool
+}
+
+func (node *Node) deleteSuccessorBackup() bool {
+	// fmt.Println("************** Invoke deleteSuccessorBackup function ***************")
+	node.Backup = make(map[*big.Int]string)
+	//fmt.Println("Backup is deleted : ", node.Backup)
+	return true
+}
+
+func (node *Node) DeleteSuccessorBackupRPC(none *struct{}, reply *DeleteSuccessorBackupRPCReply) error {
+	// fmt.Println("------------- Invoke DeleteSuccessorBackupRPC function -------------")
+	reply.Success = node.deleteSuccessorBackup()
+	return nil
+}
+
+
+func(node *Node) successorStoreFile(f FileRPC) bool {
+	//fmt.Println("************** Invoke successorStoreFile function ***************")
+	// Store file in successor's backup
+	f.Id.Mod(f.Id, hashMod)
+	node.Backup[f.Id] = f.Name
+	//fmt.Println("File", f.Name, "is stored in", node.Name, "'s backup")
+	fmt.Println("Backup: ", node.Backup)
+	return true
+}
+
+type SuccessorStoreFileRPCReply struct {
+	Success bool
+	Err    error
+}
+
+func (node *Node) SuccessorStoreFileRPC(f FileRPC, reply *SuccessorStoreFileRPCReply) error {
+	fmt.Println("------------- Invoke SuccessorStoreFileRPC function -------------")
+	reply.Success = node.successorStoreFile(f)
+	if !reply.Success {
+		reply.Err = errors.New("store file failed")
+	} else {
+		reply.Err = nil
+	}
+	return nil
 }
