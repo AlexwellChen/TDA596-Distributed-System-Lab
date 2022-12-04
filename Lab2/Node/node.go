@@ -338,7 +338,16 @@ func (node *Node) GetFileRPC(f FileRPC, reply *FileRPC) error {
 	// Return the file if success, return error if failed
 	f.Id.Mod(f.Id, hashMod)
 	fmt.Println("Get file id: ", f.Id)
-	fileName, ok := node.Bucket[f.Id]
+	var fileName string
+	var ok bool
+	// iterate the bucket to find the file
+	for key, value := range node.Bucket {
+		if key.Cmp(f.Id) == 0 {
+			fileName = value
+			ok = true
+			break
+		}
+	}
 	fmt.Println("Get file status: ", fileName, " ", ok)
 	if !ok {
 		// Print bucket

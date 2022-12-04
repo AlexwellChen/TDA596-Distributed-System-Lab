@@ -156,7 +156,7 @@ func main() {
 				fileName = strings.TrimSpace(fileName)
 				err := clientGetFile(fileName, node)
 				if err != nil {
-					fmt.Print(err)
+					fmt.Println(err)
 				} else {
 					fmt.Println("Get file success")
 				}

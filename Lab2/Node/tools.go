@@ -268,7 +268,7 @@ func clientGetFile(fileName string, node *Node) error {
 		// Write file to local
 		success := node.storeLocalFile(file)
 		if !success {
-			return errors.New("cannot store the file")
+			return errors.New("cannot store local file")
 		}
 
 	}
