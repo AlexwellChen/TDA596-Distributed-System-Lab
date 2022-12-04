@@ -53,6 +53,7 @@ type Node struct {
 	PublicKey  *rsa.PublicKey
 	// Create bucket in form of map
 	Bucket map[*big.Int]string
+	Backup map[*big.Int]string
 	// Bucket map[string]string // Hash Key -> File name value store
 	/* Exp:
 	     ------------Store File-------------
@@ -89,6 +90,7 @@ func NewNode(args Arguments) *Node {
 	node.Identifier.Mod(node.Identifier, hashMod)
 	node.FingerTable = make([]fingerEntry, fingerTableSize+1)
 	node.Bucket = make(map[*big.Int]string)
+	node.Backup = make(map[*big.Int]string)
 	node.next = 0 // start from -1, then use fixFingers() to add 1 -> 0 max: m-1
 	node.Predecessor = ""
 	node.Successors = make([]NodeAddress, args.Successors)
@@ -207,6 +209,15 @@ func (node *Node) printState() {
 		address := enrty.Address
 		fmt.Println("Finger ", i, " id: ", id, ", address: ", address)
 	}
+	fmt.Println("Node Bucket: ")
+	for k, v := range node.Bucket {
+		fmt.Println("Key: ", k, ", Value: ", v)
+	}
+	fmt.Println("Node Backup:")
+	for k, v := range node.Backup {
+		fmt.Println("Key: ", k, ", Value: ", v)
+	}
+		
 }
 
 /*------------------------------------------------------------*/
