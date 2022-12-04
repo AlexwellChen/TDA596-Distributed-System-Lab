@@ -320,13 +320,17 @@ func (node *Node) SetPredecessorRPC(predecessorAddress NodeAddress, reply *SetPr
 	return nil
 }
 
-func (node *Node) storeChordFile(f FileRPC) bool {
+func (node *Node) storeChordFile(f FileRPC, backup bool) bool {
 	// Store the file in the bucket
 	// Return true if success, false if failed
 	// Append the file to the bucket
 	f.Id.Mod(f.Id, hashMod)
-	node.Bucket[f.Id] = f.Name
-	fmt.Println("Bucket: ", node.Bucket)
+	if backup {
+		node.Backup[f.Id] = f.Name
+	} else {
+		node.Bucket[f.Id] = f.Name
+		fmt.Println("Bucket: ", node.Bucket)
+	}
 	currentNodeFileDownloadPath := "../files/" + node.Name + "/chord_storage/"
 	filepath := currentNodeFileDownloadPath + f.Name
 	// Create the file on file path and store content
@@ -371,11 +375,12 @@ func (node *Node) storeLocalFile(f FileRPC) bool {
 type StoreFileRPCReply struct {
 	Success bool
 	Err     error
+	Backup  bool
 }
 
 func (node *Node) StoreFileRPC(f FileRPC, reply *StoreFileRPCReply) error {
 	fmt.Println("-------------- Invoke StoreFileRPC function ------------")
-	reply.Success = node.storeChordFile(f)
+	reply.Success = node.storeChordFile(f, reply.Backup)
 	if !reply.Success {
 		reply.Err = errors.New("store file failed")
 	} else {

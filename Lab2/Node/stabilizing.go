@@ -159,6 +159,13 @@ func (node *Node) checkPredecessor() error {
 		if err != nil {
 			fmt.Printf("Predecessor %s has failed\n", string(pred))
 			node.Predecessor = ""
+			// Todo: When predecessor failed, backup files need to be copied to bucket
+			// fmt.Println("------------DO COPY BUCKUP TO BUCKET------------")
+			for k, v := range node.Backup {
+				if v != "" {
+					node.Bucket[k] = v
+				}
+			}
 		}
 		//defer client.Close()
 	}
@@ -421,6 +428,17 @@ func (node *Node) successorStoreFile(f FileRPC) bool {
 	// Store file in successor's backup
 	f.Id.Mod(f.Id, hashMod)
 	node.Backup[f.Id] = f.Name
+	// Write file to local
+	filepath := "../files/" + node.Name + "/chord_storage/" + f.Name
+	file, err := os.Create(filepath)
+	if err != nil {
+		fmt.Println("Cannot create backup file")
+	}
+	defer file.Close()
+	_, err = file.Write(f.Content)
+	if err != nil {
+		fmt.Println("Cannot write backup file")
+	}
 	//fmt.Println("File", f.Name, "is stored in", node.Name, "'s backup")
 	// fmt.Println("Backup: ", node.Backup)
 	return true

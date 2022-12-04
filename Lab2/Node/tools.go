@@ -236,6 +236,7 @@ func clientStoreFile(fileName string, node *Node) error {
 		// Encrypted file content
 		newFile.Content = node.encryptFile(newFile.Content)
 		reply := new(StoreFileRPCReply)
+		reply.Backup = false
 		err = ChordCall(addr, "Node.StoreFileRPC", newFile, &reply)
 		if reply.Err != nil && err != nil {
 			return errors.New("cannot store the file")
