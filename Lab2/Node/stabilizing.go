@@ -160,6 +160,12 @@ func (node *Node) checkPredecessor() error {
 		if ip == getLocalAddress() {
 			ip = "localhost"
 		}
+		if ip == "172.31.21.112"{
+			ip = "54.83.108.14"
+		}
+		if ip == "192.168.31.43"{
+			ip = "127.0.0.1"
+		}
 		predAddr := ip + ":" + port
 		_, err := jsonrpc.Dial("tcp", predAddr)
 		//_, err := jsonrpc.Dial("tcp", string(pred))
