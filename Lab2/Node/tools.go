@@ -44,9 +44,7 @@ func ChordCall(targetNode NodeAddress, method string, request interface{}, reply
 	if ip == "172.31.21.112"{
 		ip = "54.83.108.14"
 	}
-	if ip == "192.168.31.43"{
-		ip = "127.0.0.1"
-	}
+
 	targetNodeAddr := ip + ":" + port
 	client, err := jsonrpc.Dial("tcp", targetNodeAddr)
 	//client, err := jsonrpc.Dial("tcp", string(targetNode))
