@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"strings"
 	"sync"
 
 	//"net/rpc"
@@ -154,7 +155,14 @@ func (node *Node) checkPredecessor() error {
 	pred := node.Predecessor
 	if pred != "" {
 		//check connection
-		_, err := jsonrpc.Dial("tcp", string(pred))
+		ip := strings.Split(string(pred), ":")[0]
+		port := strings.Split(string(pred), ":")[1]
+		if ip == getLocalAddress() {
+			ip = "localhost"
+		}
+		predAddr := ip + ":" + port
+		_, err := jsonrpc.Dial("tcp", predAddr)
+		//_, err := jsonrpc.Dial("tcp", string(pred))
 		//if connection failed, set predecessor to nil
 		if err != nil {
 			fmt.Printf("Predecessor %s has failed\n", string(pred))

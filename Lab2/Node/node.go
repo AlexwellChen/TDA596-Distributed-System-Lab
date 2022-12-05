@@ -119,7 +119,13 @@ func (node *Node) generateRSAKey(bits int) {
 func NewNode(args Arguments) *Node {
 	// Create a new node
 	node := &Node{}
-	node.Address = NodeAddress(fmt.Sprintf("%s:%d", args.Address, args.Port))
+	//node.Address = NodeAddress(fmt.Sprintf("%s:%d", args.Address, args.Port))
+	localAddress := getLocalAddress()
+	node.Address = NodeAddress(fmt.Sprintf("%s:%d", localAddress, args.Port))
+/* 	if args.Address != "localhost" {
+		localAddress := getLocalAddress()
+		node.Address = NodeAddress(fmt.Sprintf("%s:%d", localAddress, args.Port))
+	} */
 	if args.ClientName == "Default" {
 		node.Name = string(node.Address)
 	} else {
@@ -332,7 +338,7 @@ func (node *Node) storeChordFile(f FileRPC, backup bool) bool {
 	f.Id.Mod(f.Id, hashMod)
 	if backup {
 		node.Backup[f.Id] = f.Name
-		fmt.Println("Store Backup: ",node.Backup)
+		fmt.Println("Store Backup: ", node.Backup)
 	} else {
 		node.Bucket[f.Id] = f.Name
 		fmt.Println("Store Bucket: ", node.Bucket)

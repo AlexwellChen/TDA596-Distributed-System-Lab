@@ -6,11 +6,13 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"math/big"
 	"net"
 	"net/rpc/jsonrpc"
 	"os"
 	"regexp"
+	"strings"
 )
 
 /*------------------------------------------------------------*/
@@ -34,7 +36,14 @@ type RPCServive interface{
 */
 func ChordCall(targetNode NodeAddress, method string, request interface{}, reply interface{}) error {
 	// fmt.Println("Dial to ", targetNode)
-	client, err := jsonrpc.Dial("tcp", string(targetNode))
+	ip := strings.Split(string(targetNode), ":")[0]
+	port := strings.Split(string(targetNode), ":")[1]
+	if ip == getLocalAddress() {
+		ip = "localhost"
+	}
+	targetNodeAddr := ip + ":" + port
+	client, err := jsonrpc.Dial("tcp", targetNodeAddr)
+	//client, err := jsonrpc.Dial("tcp", string(targetNode))
 	if err != nil {
 		fmt.Println("Dial Error: ", err)
 		return err
@@ -274,4 +283,16 @@ func clientGetFile(fileName string, node *Node) error {
 
 	}
 	return nil
+}
+
+func getLocalAddress() string {
+	// Obtain the local ip address from dns server 8.8.8:80
+	conn, err := net.Dial("udp", "8.8.8.8:80")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer conn.Close()
+	localAddr := conn.LocalAddr().(*net.UDPAddr)
+	fmt.Println("Local address: ", localAddr.IP.String())
+	return localAddr.IP.String()
 }

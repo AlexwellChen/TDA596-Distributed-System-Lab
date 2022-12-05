@@ -121,6 +121,7 @@ func main() {
 			command = strings.ToUpper(command)
 			if command == "PRINTSTATE" || command == "PS" {
 				node.printState()
+				getLocalAddress()
 			} else if command == "LOOKUP" || command == "L" {
 				fmt.Println("Please enter the key you want to lookup")
 				key, _ := reader.ReadString('\n')
