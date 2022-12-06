@@ -41,10 +41,10 @@ func ChordCall(targetNode NodeAddress, method string, request interface{}, reply
 	if ip == getLocalAddress() {
 		ip = "localhost"
 	}
-	if ip == "172.31.21.112"{
+	if ip == "172.31.21.112" {
 		ip = "54.83.108.14"
 	}
-	if ip == "192.168.31.43"{
+	if ip == "192.168.31.43" {
 		ip = "127.0.0.1"
 	}
 	targetNodeAddr := ip + ":" + port
@@ -205,7 +205,7 @@ func between(start, elt, end *big.Int, inclusive bool) bool {
 func clientLookUp(key string, node *Node) (NodeAddress, error) {
 	// Find the successor of key
 	// Return the successor's address and port
-	newKey := strHash(key + node.Name) // Use file name + node name as key
+	newKey := strHash(key) // Use file name as key
 	addr := find(newKey, node.Address)
 	if addr == "-1" {
 		return "", errors.New("cannot find the store position of the key")
