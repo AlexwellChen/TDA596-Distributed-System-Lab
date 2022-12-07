@@ -120,7 +120,7 @@ func NewNode(args Arguments) *Node {
 	// Create a new node
 	node := &Node{}
 	//node.Address = NodeAddress(fmt.Sprintf("%s:%d", args.Address, args.Port))
-	localAddress := NAT(getLocalAddress())
+	localAddress := getLocalAddress()
 	node.Address = NodeAddress(fmt.Sprintf("%s:%d", localAddress, args.Port))
 	/* 	if args.Address != "localhost" {
 		localAddress := getLocalAddress()
