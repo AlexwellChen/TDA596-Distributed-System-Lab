@@ -41,8 +41,15 @@ func ChordCall(targetNode NodeAddress, method string, request interface{}, reply
 	if ip == getLocalAddress() {
 		ip = "localhost"
 	}
+
+	// wwq's NAT
 	if ip == "172.31.21.112" {
-		ip = "54.83.108.14"
+		ip = "3.89.241.69"
+	}
+
+	// cfz's NAT
+	if ip == "192.168.31.236" {
+		ip = "95.80.36.91"
 	}
 
 	targetNodeAddr := ip + ":" + port
@@ -297,6 +304,6 @@ func getLocalAddress() string {
 	}
 	defer conn.Close()
 	localAddr := conn.LocalAddr().(*net.UDPAddr)
-	//fmt.Println("Local address: ", localAddr.IP.String())
+	// fmt.Println("Local address: ", localAddr.IP.String())
 	return localAddr.IP.String()
 }
