@@ -179,14 +179,27 @@ func (node *Node) checkPredecessor() error {
 		//if connection failed, set predecessor to nil
 		if err != nil {
 			fmt.Printf("Predecessor %s has failed\n", string(pred))
-			node.Predecessor = ""
-			// Todo: When predecessor failed, backup files need to be copied to bucket
-			// fmt.Println("------------DO COPY BUCKUP TO BUCKET------------")
-			for k, v := range node.Backup {
-				if v != "" {
-					node.Bucket[k] = v
+			// Retry 3 times
+			success :=	false
+			for i := 0; i < 3; i++ {
+				_, err = jsonrpc.Dial("tcp", predAddr)
+				if err != nil {
+					fmt.Printf("Predecessor %s has failed\n", string(pred), "Retry ", i+1, " times")
+					time.Sleep(1 * time.Second)
+				} else {
+					success = true
+					break
+				}
+			if !success {
+				node.Predecessor = ""
+				// fmt.Println("------------DO COPY BUCKUP TO BUCKET------------")
+				for k, v := range node.Backup {
+					if v != "" {
+						node.Bucket[k] = v
+					}
 				}
 			}
+
 		}
 		//defer client.Close()
 	}
