@@ -42,6 +42,9 @@ func ChordCall(targetNode NodeAddress, method string, request interface{}, reply
 		ip = "localhost"
 	}
 
+	/*
+	* NAT: ip is internal ip, need to be changed to external ip
+	 */
 	// wwq's NAT
 	if ip == "172.31.21.112" {
 		ip = "3.89.241.69"
@@ -105,9 +108,9 @@ func getCmdArgs() Arguments {
 	flag.IntVar(&p, "p", 8000, "Current node port")
 	flag.StringVar(&ja, "ja", "Unspecified", "Joining node address")
 	flag.IntVar(&jp, "jp", 8000, "Joining node port")
-	flag.IntVar(&ts, "ts", 1000, "The time in milliseconds between invocations of stabilize.")
-	flag.IntVar(&tff, "tff", 1000, "The time in milliseconds between invocations of fix_fingers.")
-	flag.IntVar(&tcp, "tcp", 1000, "The time in milliseconds between invocations of check_predecessor.")
+	flag.IntVar(&ts, "ts", 30000, "The time in milliseconds between invocations of stabilize.")
+	flag.IntVar(&tff, "tff", 10000, "The time in milliseconds between invocations of fix_fingers.")
+	flag.IntVar(&tcp, "tcp", 30000, "The time in milliseconds between invocations of check_predecessor.")
 	flag.IntVar(&r, "r", 3, "The number of successors to maintain.")
 	flag.StringVar(&i, "i", "Default", "Client ID")
 	flag.Parse()

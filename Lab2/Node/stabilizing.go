@@ -160,9 +160,19 @@ func (node *Node) checkPredecessor() error {
 		if ip == getLocalAddress() {
 			ip = "localhost"
 		}
-		if ip == "172.31.21.112"{
-			ip = "54.83.108.14"
+		/*
+		* NAT: ip is internal ip, need to be changed to external ip
+		 */
+		// wwq's NAT
+		if ip == "172.31.21.112" {
+			ip = "3.89.241.69"
 		}
+
+		// cfz's NAT
+		if ip == "192.168.31.236" {
+			ip = "95.80.36.91"
+		}
+
 		predAddr := ip + ":" + port
 		_, err := jsonrpc.Dial("tcp", predAddr)
 		//_, err := jsonrpc.Dial("tcp", string(pred))
@@ -255,7 +265,7 @@ func (node *Node) fixFingers() error {
 		node.next = node.next + 1
 		mutex.Unlock()
 		if node.next > fingerTableSize {
-			// we have updated all entries, set to -1
+			// we have updated all entries, set to 0
 			mutex.Lock()
 			node.next = 0
 			mutex.Unlock()
@@ -367,7 +377,7 @@ func (node *Node) moveFiles(addr NodeAddress) {
 			fmt.Println("Cannot read the file")
 		}
 		newFile.Id = key
-		if between(fileId , addressId, node.Identifier, false) {
+		if between(fileId, addressId, node.Identifier, false) {
 			//move file to new node
 			var moveFileRPCReply StoreFileRPCReply
 			// Move local file to new predecessor using storeFile function
