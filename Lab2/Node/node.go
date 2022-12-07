@@ -287,7 +287,7 @@ func (node *Node) printState() {
 		fmt.Println("Successor ", i, " address: ", node.Successors[i])
 	}
 	fmt.Println("Node Finger Table: ")
-	for i := 0; i < fingerTableSize+1; i++ {
+	for i := 1; i < fingerTableSize+1; i++ {
 		enrty := node.FingerTable[i]
 		id := new(big.Int).SetBytes(enrty.Id)
 		address := enrty.Address
