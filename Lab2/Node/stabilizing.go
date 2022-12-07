@@ -3,13 +3,13 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"math/big"
+	"net/rpc/jsonrpc"
+	"os"
 	"strings"
 	"sync"
 	"time"
-	"io/ioutil"
-	"net/rpc/jsonrpc"
-	"os"
 )
 
 /*
@@ -107,7 +107,7 @@ func (node *Node) stablize() error {
 				return err
 			}
 			defer file.Close()
-			newFile.Content, err = ioutil.ReadAll(file) 
+			newFile.Content, err = ioutil.ReadAll(file)
 			if err != nil {
 				fmt.Println("Copy to backup: read file failed: ", err)
 				return err
@@ -133,21 +133,8 @@ func (node *Node) checkPredecessor() error {
 		//check connection
 		ip := strings.Split(string(pred), ":")[0]
 		port := strings.Split(string(pred), ":")[1]
-		if ip == getLocalAddress() {
-			ip = "localhost"
-		}
-		/*
-		* NAT: ip is internal ip, need to be changed to external ip
-		 */
-		// wwq's NAT
-		if ip == "172.31.21.112" {
-			ip = "3.89.241.69"
-		}
 
-		// cfz's NAT
-		if ip == "192.168.31.236" {
-			ip = "95.80.36.91"
-		}
+		ip = NAT(ip) // Transalate the internal ip address to public ip address (if external ip is used)
 
 		predAddr := ip + ":" + port
 		_, err := jsonrpc.Dial("tcp", predAddr)
@@ -326,7 +313,6 @@ func (node *Node) notify(address NodeAddress) (bool, error) {
 	}
 
 }
-
 
 func (node *Node) moveFiles(addr NodeAddress) {
 	// Parse local bucket
