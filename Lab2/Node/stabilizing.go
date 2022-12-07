@@ -373,7 +373,16 @@ func (node *Node) notify(address NodeAddress) (bool, error) {
 // TODO: Add return for moveFiles function
 func (node *Node) moveFiles(addr NodeAddress) {
 	// Parse local bucket
-	addressId := strHash(string(addr))
+	// Get address name
+	addressName := ""
+	var getAddressNameRPCReply GetNameRPCReply
+	err := ChordCall(addr, "Node.GetNameRPC", "", &getAddressNameRPCReply)
+	if err != nil {
+		fmt.Println("Get address name failed: ", err)
+		return
+	}
+	addressName = getAddressNameRPCReply.Name
+	addressId := strHash(addressName)
 	addressId.Mod(addressId, hashMod)
 	for key, element := range node.Bucket {
 		fileId := key
