@@ -148,13 +148,13 @@ func NewNode(args Arguments) *Node {
 	node.initSuccessors()
 	// Create Node folder in upper directory
 	if _, err := os.Stat("../files/" + node.Name); os.IsNotExist(err) {
-		err := os.Mkdir("../files/"+node.Name, 0777)
+		err := os.MkdirAll("../files/"+node.Name, os.ModePerm)
 		if err != nil {
-			fmt.Println("Create Node folder failed")
+			fmt.Println("Create Node folder failed: " + err.Error())
 		} else {
 			// Create file_upload folder in Node folder
 			if _, err := os.Stat("../files/" + node.Name + "/file_upload"); os.IsNotExist(err) {
-				os.Mkdir("../files/"+node.Name+"/file_upload", 0777)
+				os.Mkdir("../files/"+node.Name+"/file_upload", os.ModePerm)
 			} else {
 				fmt.Println("file_upload folder already exist")
 			}
