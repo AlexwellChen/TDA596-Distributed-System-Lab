@@ -187,6 +187,7 @@ func clientLookUp(key string, node *Node) (NodeAddress, error) {
 	// Return the successor's address and port
 	newKey := strHash(key) // Use file name as key
 	addr := find(newKey, node.Address)
+
 	if addr == "-1" {
 		return "", errors.New("cannot find the store position of the key")
 	} else {

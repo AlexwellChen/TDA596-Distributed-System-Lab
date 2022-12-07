@@ -85,6 +85,10 @@ func (node *Node) MethodRPC(Request interface{}, reply *MethodRPCReply) error {
 
   Given a file name, find the location in the Chord ring where the file exists, if the file exists, then download it to the local folder of the current node and decrypt the contents according to the node's key.
 
+* PrintState():
+
+  Print the current node status, including finger table and successor list.
+
 * Quit:
 
   Shutdown current node.
