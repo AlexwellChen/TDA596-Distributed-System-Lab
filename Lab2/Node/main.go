@@ -66,7 +66,6 @@ func main() {
 			os.Exit(1)
 		}
 		rpc.Register(node)
-		// rpc.HandleHTTP()
 		// Listen to the address
 		listener, err := net.ListenTCP("tcp", tcpAddr)
 		if err != nil {

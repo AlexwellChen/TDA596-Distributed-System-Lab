@@ -119,13 +119,8 @@ func (node *Node) generateRSAKey(bits int) {
 func NewNode(args Arguments) *Node {
 	// Create a new node
 	node := &Node{}
-	//node.Address = NodeAddress(fmt.Sprintf("%s:%d", args.Address, args.Port))
 	localAddress := getLocalAddress()
 	node.Address = NodeAddress(fmt.Sprintf("%s:%d", localAddress, args.Port))
-	/* 	if args.Address != "localhost" {
-		localAddress := getLocalAddress()
-		node.Address = NodeAddress(fmt.Sprintf("%s:%d", localAddress, args.Port))
-	} */
 	if args.ClientName == "Default" {
 		node.Name = string(node.Address)
 	} else {
@@ -193,7 +188,7 @@ func NewNode(args Arguments) *Node {
 			panic(err)
 		}
 		defer privateHandler.Close()
-		privateKeyBuffer, err := ioutil.ReadAll(privateHandler)
+		privateKeyBuffer, _ := ioutil.ReadAll(privateHandler)
 		priBlock, _ := pem.Decode(privateKeyBuffer)
 		privateKey, err := x509.ParsePKCS1PrivateKey(priBlock.Bytes)
 		if err != nil {
@@ -236,7 +231,6 @@ func (node *Node) initSuccessors() {
 }
 
 func (node *Node) joinChord(joinNode NodeAddress) error {
-	// Todo: Join the Chord ring
 	// Find the successor of the node's identifier
 	// Set the node's predecessor to nil and successors to the exits node
 	// joinNode is the successor of current node, which is node.Successors[0]
@@ -269,10 +263,6 @@ func (node *Node) createChord() {
 	for i := 0; i < len(node.Successors); i++ {
 		node.Successors[i] = node.Address
 	}
-}
-
-func (node *Node) leaveChord() {
-	// Todo: What fault tolerance should be considered? unexpected node failure or user exit?
 }
 
 func (node *Node) printState() {
@@ -318,7 +308,6 @@ func (node *Node) setPredecessor(predecessorAddress NodeAddress) bool {
 	return flag
 }
 
-// TODO: warning here:argument reply is overwritten before first use
 func (node *Node) SetPredecessorRPC(predecessorAddress NodeAddress, reply *SetPredecessorRPCReply) error {
 	fmt.Println("-------------- Invoke SetPredecessorRPC function ------------")
 	reply.Success = node.setPredecessor(predecessorAddress)

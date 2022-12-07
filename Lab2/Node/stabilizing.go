@@ -7,8 +7,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	//"net/rpc"
 	"io/ioutil"
 	"net/rpc/jsonrpc"
 	"os"
@@ -24,19 +22,13 @@ import (
 
 // verifies n’s immediate
 func (node *Node) stablize() error {
-	//??Truncate the list if needed so it is not too long
-	//??(measuring it against the maximum length discussed above).
 	// fmt.Println("***************** Invoke stablize function *****************")
-	//node.Successors[0] = node.getSuccessor()
 	var getSuccessorListRPCReply GetSuccessorListRPCReply
-	//fmt.Println("node.Successors: ", node.Successors[0])
 	err := ChordCall(node.Successors[0], "Node.GetSuccessorListRPC", struct{}{}, &getSuccessorListRPCReply)
 	successors := getSuccessorListRPCReply.SuccessorList
 	if err == nil {
 		for i := 0; i < len(successors)-1; i++ {
-			//fmt.Printf("node successors[%d]: successors[%d]: %s\n", i+1, i, successors[i])
 			node.Successors[i+1] = successors[i]
-			//Todo: check if need to do a loop chordCall for all successors[0]
 		}
 	} else {
 		fmt.Println("GetSuccessorList failed")
@@ -87,13 +79,6 @@ func (node *Node) stablize() error {
 		successorId.Mod(successorId, hashMod)
 		if predecessorAddr != "" && between(nodeId,
 			predecessorId, successorId, false) {
-			/* fmt.Println(strHash(string(node.Name)),"and",
-				strHash(string(predecessorName)), "and",strHash(string(successorName)))
-				fmt.Println(node.Identifier)
-				fmt.Println(strHash(string(node.Name)).Cmp(strHash(string(predecessorName))))
-				fmt.Println(strHash(string(predecessorName)).Cmp(strHash(string(successorName))))
-			fmt.Printf("Predecessor %s is between %s and %s\n", predecessorAddr, node.Name, successorName)
-			fmt.Printf("Set successor[0] to %s\n", predecessorAddr) */
 			node.Successors[0] = predecessorAddr
 		}
 	}
@@ -109,15 +94,11 @@ func (node *Node) stablize() error {
 		newFile := FileRPC{}
 		newFile.Name = v
 		newFile.Id = k
-		//fmt.Println("lastValue: ", lastValue)
-		//fmt.Println("newFile.Name: ", newFile.Name)
 		// check loop
 		if v == lastValue {
-			//fmt.Println("Loop detected, break")
 			break
 		}
 		if v != "" {
-			//fmt.Println("lastValue and v: ", lastValue, "and", v)
 			lastValue = v
 			filepath := "../files/" + node.Name + "/chord_storage/" + v
 			file, err := os.Open(filepath)
@@ -126,12 +107,11 @@ func (node *Node) stablize() error {
 				return err
 			}
 			defer file.Close()
-			newFile.Content, err = ioutil.ReadAll(file) // check if need?
+			newFile.Content, err = ioutil.ReadAll(file) 
 			if err != nil {
 				fmt.Println("Copy to backup: read file failed: ", err)
 				return err
 			} else {
-				//TODO: check if need encrypt??
 				reply := new(SuccessorStoreFileRPCReply)
 				err = ChordCall(node.Successors[0], "Node.SuccessorStoreFileRPC", newFile, &reply)
 				if reply.Err != nil && err != nil {
@@ -142,11 +122,6 @@ func (node *Node) stablize() error {
 	}
 	var fakeReply NotifyRPCReply
 	ChordCall(node.Successors[0], "Node.NotifyRPC", node.Address, &fakeReply)
-	/* 	if !fakeReply.Success {
-	   		// fmt.Println("Notify failed: ", fakeReply.err)
-	   	} else {
-	   		// fmt.Println("Notify success")
-	   	} */
 	return nil
 }
 
@@ -176,8 +151,6 @@ func (node *Node) checkPredecessor() error {
 
 		predAddr := ip + ":" + port
 		_, err := jsonrpc.Dial("tcp", predAddr)
-		//_, err := jsonrpc.Dial("tcp", string(pred))
-		//if connection failed, set predecessor to nil
 		if err != nil {
 			fmt.Printf("Predecessor %s has failed\n", string(pred))
 			// Retry 3 times
@@ -203,7 +176,6 @@ func (node *Node) checkPredecessor() error {
 			}
 
 		}
-		//defer client.Close()
 	}
 	return nil
 }
@@ -211,7 +183,6 @@ func (node *Node) checkPredecessor() error {
 // calculate (n + 2^(k-1) ) mod 2^m
 func (node *Node) fingerEntry(fingerentry int) *big.Int {
 	//fmt.Println("************** Invoke fingerEntry function ******************")
-	//var hashMod = new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(len(node.FingerTable)-1)), nil)
 	// id = n (node n identifier)
 	id := node.Identifier
 	two := big.NewInt(2)
@@ -228,7 +199,6 @@ func (node *Node) fingerEntry(fingerentry int) *big.Int {
 // refreshes finger table entries, next stores the index of the next finger to fix
 func (node *Node) fixFingers() error {
 	// fmt.Println("*************** Invoke fixfinger function ***************")
-
 	// Lock node.next
 	var mutex sync.Mutex
 	mutex.Lock()
@@ -249,12 +219,6 @@ func (node *Node) fixFingers() error {
 		fmt.Println("Find successor failed")
 		return err
 	}
-	// fmt.Println("FindSuccessorRPC recieve result: ", result)
-	//update fingertable(next)
-	/* 	if result.found {
-		node.FingerTable[node.next].Address = result.SuccessorAddress
-		node.FingerTable[node.next].Id = id.Bytes()
-	} */
 	// // Get successor's name
 	var getSuccessorNameRPCReply GetNameRPCReply
 	err = ChordCall(result.SuccessorAddress, "Node.GetNameRPC", "", &getSuccessorNameRPCReply)
@@ -263,17 +227,11 @@ func (node *Node) fixFingers() error {
 		fmt.Println("Fix finger get successor name failed")
 		return err
 	}
-	//fmt.Println("FingerTable[", node.next, "] = ", getSuccessorNameRPCReply.Name)
 	node.FingerTable[node.next].Id = id.Bytes()
 	if node.FingerTable[node.next].Address != result.SuccessorAddress && result.SuccessorAddress != "" {
 		fmt.Println("FingerTable[", node.next, "] = ", getSuccessorNameRPCReply.Name)
 		node.FingerTable[node.next].Address = result.SuccessorAddress
 	}
-	/* 		_, addr := node.findSuccessor(id)
-	   		if addr != "" && addr != node.FingerTable[node.next].Address {
-	   			node.FingerTable[node.next].Address = addr
-	   			node.FingerTable[node.next].Id = id.Bytes()
-	   		} */
 	//optimization, update other finger table entries use the first successor
 	for {
 		mutex.Lock()
@@ -324,7 +282,7 @@ type NotifyRPCReply struct {
 // 'address' thinks it might be our predecessor
 func (node *Node) notify(address NodeAddress) (bool, error) {
 	// fmt.Println("***************** Invoke notify function ********************")
-	//if (predecessor is nil or n' ∈ (predecessor, n))
+	// if (predecessor is nil or n' ∈ (predecessor, n))
 	// Get predecessor name
 	if node.Predecessor != "" {
 		predcessorName := ""
@@ -353,7 +311,6 @@ func (node *Node) notify(address NodeAddress) (bool, error) {
 		addressId.Mod(addressId, hashMod)
 
 		nodeId := node.Identifier
-		// fmt.Println("predcessorId: ", predcessorId, "addressId: ", addressId, "nodeId: ", nodeId)
 		if between(predcessorId, addressId, nodeId, false) {
 			//predecessor = n'
 			node.Predecessor = address
@@ -370,7 +327,7 @@ func (node *Node) notify(address NodeAddress) (bool, error) {
 
 }
 
-// TODO: Add return for moveFiles function
+
 func (node *Node) moveFiles(addr NodeAddress) {
 	// Parse local bucket
 	// Get address name
@@ -424,7 +381,6 @@ func (node *Node) moveFiles(addr NodeAddress) {
 	}
 }
 
-// TODO: check if the notifyrpc function is correct
 func (node *Node) NotifyRPC(address NodeAddress, reply *NotifyRPCReply) error {
 	// fmt.Println("---------------- Invoke NotifyRPC function ------------------")
 	node.moveFiles(address)
@@ -473,21 +429,7 @@ type DeleteSuccessorBackupRPCReply struct {
 }
 
 func (node *Node) deleteSuccessorBackup() bool {
-	// fmt.Println("************** Invoke deleteSuccessorBackup function ***************")
-	// // Delete backup files first
-	// backupPath := "../files/" + node.Name + "/chord_storage/"
-	// // Read file names from node.Backup
-	// for _, fileName := range node.Backup {
-	// 	filepath := backupPath + fileName
-	// 	err := os.Remove(filepath)
-	// 	if err != nil {
-	// 		fmt.Println("Cannot delete file: ", fileName)
-	// 	}
-	// }
-	// Clear node.Backup
 	node.Backup = make(map[*big.Int]string)
-	//fmt.Println("Backup is deleted : ", node.Backup)
-
 	return true
 }
 
@@ -513,7 +455,6 @@ func (node *Node) successorStoreFile(f FileRPC) bool {
 	if err != nil {
 		fmt.Println("Cannot write backup file")
 	}
-	//fmt.Println("File", f.Name, "is stored in", node.Name, "'s backup")
 	fmt.Println("Stab Backup: ", node.Backup)
 	return true
 }

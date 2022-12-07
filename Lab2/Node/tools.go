@@ -28,12 +28,6 @@ import (
 * @param:		reply: the reply to be received
 * @return:		error: the error returned by the RPC call
  */
-/*
-type RPCServive interface{
-
-	node.FindSuccessorRPC(requestID *big.Int, reply *FindSuccessorRPCReply) error
-}
-*/
 func ChordCall(targetNode NodeAddress, method string, request interface{}, reply interface{}) error {
 	// fmt.Println("Dial to ", targetNode)
 	ip := strings.Split(string(targetNode), ":")[0]
@@ -57,7 +51,6 @@ func ChordCall(targetNode NodeAddress, method string, request interface{}, reply
 
 	targetNodeAddr := ip + ":" + port
 	client, err := jsonrpc.Dial("tcp", targetNodeAddr)
-	//client, err := jsonrpc.Dial("tcp", string(targetNode))
 	if err != nil {
 		fmt.Println("Dial Error: ", err)
 		return err
@@ -68,9 +61,6 @@ func ChordCall(targetNode NodeAddress, method string, request interface{}, reply
 		fmt.Println("Call Error:", err)
 		return err
 	}
-	// if method == "Node.FindSuccessorRPC" {
-	// 	fmt.Println("FindSuccessorRPC reply in Chord call: ", &reply)
-	// }
 	return nil
 }
 
@@ -192,9 +182,7 @@ func CheckArgsValid(args Arguments) int {
 	}
 }
 
-// func call(address string, method string, request interface{}, reply interface{}) error{
-// 	return rpc.NewClientWithCodec(rpc.NewClientCodec(
-// }
+
 
 func strHash(elt string) *big.Int {
 	hasher := sha1.New()
@@ -307,6 +295,5 @@ func getLocalAddress() string {
 	}
 	defer conn.Close()
 	localAddr := conn.LocalAddr().(*net.UDPAddr)
-	// fmt.Println("Local address: ", localAddr.IP.String())
 	return localAddr.IP.String()
 }
