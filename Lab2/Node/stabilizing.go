@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"strings"
 	"sync"
+	"time"
 
 	//"net/rpc"
 	"io/ioutil"
@@ -180,16 +181,17 @@ func (node *Node) checkPredecessor() error {
 		if err != nil {
 			fmt.Printf("Predecessor %s has failed\n", string(pred))
 			// Retry 3 times
-			success :=	false
+			success := false
 			for i := 0; i < 3; i++ {
 				_, err = jsonrpc.Dial("tcp", predAddr)
 				if err != nil {
-					fmt.Printf("Predecessor %s has failed\n", string(pred), "Retry ", i+1, " times")
+					fmt.Println("Retry ", i+1, " times")
 					time.Sleep(1 * time.Second)
 				} else {
 					success = true
 					break
 				}
+			}
 			if !success {
 				node.Predecessor = ""
 				// fmt.Println("------------DO COPY BUCKUP TO BUCKET------------")
