@@ -148,3 +148,20 @@ func (node *Node) GetNameRPC(fakeRequest string, reply *GetNameRPCReply) error {
 	reply.Name = node.getName()
 	return nil
 }
+
+func NAT(addr string) string {
+	/*
+	* NAT: ip is internal ip, need to be changed to external ip
+	 */
+	new_addr := "localhost"
+	// wwq's NAT
+	if addr == "172.31.21.112" {
+		new_addr = "3.89.241.69"
+	}
+
+	// cfz's NAT
+	if addr == "192.168.31.236" {
+		new_addr = "95.80.36.91"
+	}
+	return new_addr
+}

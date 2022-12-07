@@ -401,6 +401,10 @@ func (node *Node) moveFiles(addr NodeAddress) {
 				fmt.Println("Move file failed: ", err)
 			}
 			//delete file from local bucket
+			fmt.Println("FileId: ", fileId)
+			fmt.Println("addressId: ", addressId)
+			fmt.Println("Address is: ", addr)
+			fmt.Println("node.Identifier: ", node.Identifier)
 			delete(node.Bucket, key)
 			// delete file from local directory
 			err = os.Remove(filepath)
