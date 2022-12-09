@@ -441,7 +441,7 @@ func (node *Node) successorStoreFile(f FileRPC) bool {
 	if err != nil {
 		fmt.Println("Cannot write backup file")
 	}
-	fmt.Println("Stab Backup: ", node.Backup)
+	// fmt.Println("Stab Backup: ", node.Backup)
 	return true
 }
 
