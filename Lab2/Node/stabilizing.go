@@ -344,7 +344,7 @@ func (node *Node) moveFiles(addr NodeAddress) {
 			fmt.Println("Cannot read the file")
 		}
 		newFile.Id = key
-		if between(fileId, addressId, node.Identifier, false) {
+		if between(fileId, addressId, node.Identifier, true) && fileId.Cmp(node.Identifier) != 0 { // if file shouldn't be in this node
 			//move file to new node
 			var moveFileRPCReply StoreFileRPCReply
 			// Move local file to new predecessor using storeFile function

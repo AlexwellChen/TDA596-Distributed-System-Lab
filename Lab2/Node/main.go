@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"math/big"
 	"net"
 	"net/rpc"
 	"net/rpc/jsonrpc"
@@ -45,7 +46,16 @@ func HandleConnection(listener *net.TCPListener, node *Node) {
 	}
 }
 
+func testBetween() {
+	// Test between in big.Int
+	start := big.NewInt(26)
+	elt := big.NewInt(56)
+	end := big.NewInt(26)
+	fmt.Println(between(start, elt, end, true))
+}
+
 func main() {
+	// testBetween()
 	// Parse command line arguments
 	Arguments := getCmdArgs()
 	fmt.Println(Arguments)

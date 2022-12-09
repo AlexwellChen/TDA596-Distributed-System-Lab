@@ -84,11 +84,11 @@ func getCmdArgs() Arguments {
 	flag.IntVar(&p, "p", 8000, "Current node port")
 	flag.StringVar(&ja, "ja", "Unspecified", "Joining node address")
 	flag.IntVar(&jp, "jp", 8000, "Joining node port")
-	flag.IntVar(&ts, "ts", 30000, "The time in milliseconds between invocations of stabilize.")
-	flag.IntVar(&tff, "tff", 10000, "The time in milliseconds between invocations of fix_fingers.")
-	flag.IntVar(&tcp, "tcp", 30000, "The time in milliseconds between invocations of check_predecessor.")
+	flag.IntVar(&ts, "ts", 3000, "The time in milliseconds between invocations of stabilize.")
+	flag.IntVar(&tff, "tff", 1000, "The time in milliseconds between invocations of fix_fingers.")
+	flag.IntVar(&tcp, "tcp", 3000, "The time in milliseconds between invocations of check_predecessor.")
 	flag.IntVar(&r, "r", 3, "The number of successors to maintain.")
-	flag.StringVar(&i, "i", "Default", "Client ID")
+	flag.StringVar(&i, "i", "Default", "Client ID/Name")
 	flag.Parse()
 
 	// Return command line arguments
@@ -175,7 +175,7 @@ func strHash(elt string) *big.Int {
 }
 
 func between(start, elt, end *big.Int, inclusive bool) bool {
-	if end.Cmp(start) > 0 {
+	if end.Cmp(start) > 0 { // start < end
 		return (start.Cmp(elt) < 0 && elt.Cmp(end) < 0) || (inclusive && elt.Cmp(end) == 0)
 	} else {
 		return start.Cmp(elt) < 0 || elt.Cmp(end) < 0 || (inclusive && elt.Cmp(end) == 0)

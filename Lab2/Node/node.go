@@ -119,7 +119,12 @@ func (node *Node) generateRSAKey(bits int) {
 func NewNode(args Arguments) *Node {
 	// Create a new node
 	node := &Node{}
-	localAddress := getLocalAddress()
+	var localAddress string
+	if args.Address == "localhost" || args.Address == "127.0.0.1" {
+		localAddress = string(args.Address)
+	} else {
+		localAddress = getLocalAddress()
+	}
 	node.Address = NodeAddress(fmt.Sprintf("%s:%d", localAddress, args.Port))
 	if args.ClientName == "Default" {
 		node.Name = string(node.Address)
