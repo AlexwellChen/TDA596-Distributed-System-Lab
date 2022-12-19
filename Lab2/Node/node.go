@@ -52,8 +52,9 @@ type Node struct {
 	Successors  []NodeAddress // Multiple successors to handle first succesor node failures
 
 	// For Chord data encryption
-	PrivateKey *rsa.PrivateKey
-	PublicKey  *rsa.PublicKey
+	PrivateKey  *rsa.PrivateKey
+	PublicKey   *rsa.PublicKey
+	EncryptFlag bool
 	// Create bucket in form of map
 	Bucket map[*big.Int]string
 	Backup map[*big.Int]string
@@ -144,6 +145,7 @@ func NewNode(args Arguments) *Node {
 	node.next = 0 // start from -1, then use fixFingers() to add 1 -> 0 max: m-1
 	node.Predecessor = ""
 	node.Successors = make([]NodeAddress, args.Successors)
+	node.EncryptFlag = true
 	node.initFingerTable()
 	node.initSuccessors()
 	// Create Node folder in upper directory

@@ -230,7 +230,9 @@ func clientStoreFile(fileName string, node *Node) error {
 		return err
 	} else {
 		// Encrypted file content
-		newFile.Content = node.encryptFile(newFile.Content)
+		if node.EncryptFlag {
+			newFile.Content = node.encryptFile(newFile.Content)
+		}
 		reply := new(StoreFileRPCReply)
 		reply.Backup = false
 		err = ChordCall(addr, "Node.StoreFileRPC", newFile, &reply)
@@ -261,7 +263,9 @@ func clientGetFile(fileName string, node *Node) error {
 		return err
 	} else {
 		// Decrypt file content
-		file.Content = node.decryptFile(file.Content)
+		if node.EncryptFlag {
+			file.Content = node.decryptFile(file.Content)
+		}
 		// Write file to local
 		success := node.storeLocalFile(file)
 		if !success {
