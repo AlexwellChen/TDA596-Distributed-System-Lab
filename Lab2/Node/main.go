@@ -143,13 +143,24 @@ func main() {
 					fmt.Println("The address of the key is ", resultAddr)
 
 				}
-				// Get the address of the node that stores the file
-				var getNameRPCReply GetNameRPCReply
-				err = ChordCall(resultAddr, "NodeRPC.GetNameRPC", "", &getNameRPCReply)
+				// Check if the key is stored in the node
+				checkFileExistRPCReply := CheckFileExistRPCReply{}
+				err = ChordCall(resultAddr, "Node.CheckFileExistRPC", key, &checkFileExistRPCReply)
 				if err != nil {
-					fmt.Println("Get name RPC call failed")
+					fmt.Println("Check file exist RPC call failed")
 				} else {
-					fmt.Println("The file is stored at ", getNameRPCReply.Name)
+					if checkFileExistRPCReply.Exist {
+						// Get the address of the node that stores the file
+						var getNameRPCReply GetNameRPCReply
+						err = ChordCall(resultAddr, "Node.GetNameRPC", "", &getNameRPCReply)
+						if err != nil {
+							fmt.Println("Get name RPC call failed")
+						} else {
+							fmt.Println("The file is stored at ", getNameRPCReply.Name)
+						}
+					} else {
+						fmt.Println("The file is not stored in the node")
+					}
 				}
 			} else if command == "STOREFILE" || command == "S" {
 				fmt.Println("Please enter the file name you want to store")

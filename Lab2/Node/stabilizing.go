@@ -8,8 +8,6 @@ import (
 	"net/rpc/jsonrpc"
 	"os"
 	"strings"
-	"sync"
-	"time"
 )
 
 /*
@@ -141,24 +139,31 @@ func (node *Node) checkPredecessor() error {
 		if err != nil {
 			fmt.Printf("Predecessor %s has failed\n", string(pred))
 			// Retry 3 times
-			success := false
-			for i := 0; i < 3; i++ {
-				_, err = jsonrpc.Dial("tcp", predAddr)
-				if err != nil {
-					fmt.Println("Retry ", i+1, " times")
-					time.Sleep(1 * time.Second)
-				} else {
-					success = true
-					break
-				}
-			}
-			if !success {
-				node.Predecessor = ""
-				// fmt.Println("------------DO COPY BUCKUP TO BUCKET------------")
-				for k, v := range node.Backup {
-					if v != "" {
-						node.Bucket[k] = v
-					}
+			// success := false
+			// for i := 0; i < 3; i++ {
+			// 	_, err = jsonrpc.Dial("tcp", predAddr)
+			// 	if err != nil {
+			// 		fmt.Println("Retry ", i+1, " times")
+			// 		time.Sleep(1 * time.Second)
+			// 	} else {
+			// 		success = true
+			// 		break
+			// 	}
+			// }
+			// if !success {
+			// 	node.Predecessor = ""
+			// 	// fmt.Println("------------DO COPY BUCKUP TO BUCKET------------")
+			// 	for k, v := range node.Backup {
+			// 		if v != "" {
+			// 			node.Bucket[k] = v
+			// 		}
+			// 	}
+			// }
+			node.Predecessor = ""
+			// fmt.Println("------------DO COPY BUCKUP TO BUCKET------------")
+			for k, v := range node.Backup {
+				if v != "" {
+					node.Bucket[k] = v
 				}
 			}
 
@@ -187,16 +192,16 @@ func (node *Node) fingerEntry(fingerentry int) *big.Int {
 func (node *Node) fixFingers() error {
 	// fmt.Println("*************** Invoke fixfinger function ***************")
 	// Lock node.next
-	var mutex sync.Mutex
-	mutex.Lock()
+
+	// node.mutex.Lock()
 	node.next = node.next + 1
-	// Unlock node.next
-	mutex.Unlock()
+	// node.mutex.Unlock()
 
 	if node.next > fingerTableSize {
-		mutex.Lock()
+		// node.mutex.Lock()
 		node.next = 1
-		mutex.Unlock()
+		// node.mutex.Unlock()
+
 	}
 	id := node.fingerEntry(node.next)
 	//find successor of id
@@ -206,7 +211,7 @@ func (node *Node) fixFingers() error {
 		fmt.Println("Find successor failed")
 		return err
 	}
-	// // Get successor's name
+	// Get successor's name
 	var getSuccessorNameRPCReply GetNameRPCReply
 	err = ChordCall(result.SuccessorAddress, "Node.GetNameRPC", "", &getSuccessorNameRPCReply)
 	if err != nil {
@@ -221,14 +226,15 @@ func (node *Node) fixFingers() error {
 	}
 	//optimization, update other finger table entries use the first successor
 	for {
-		mutex.Lock()
+		// node.mutex.Lock()
 		node.next = node.next + 1
-		mutex.Unlock()
+		// node.mutex.Unlock()
+
 		if node.next > fingerTableSize {
 			// we have updated all entries, set to 0
-			mutex.Lock()
+			// node.mutex.Lock()
 			node.next = 0
-			mutex.Unlock()
+			// node.mutex.Unlock()
 			return nil
 		}
 		id := node.fingerEntry(node.next)
@@ -248,9 +254,9 @@ func (node *Node) fixFingers() error {
 				fmt.Println("FingerTable[", node.next, "] = ", result.SuccessorAddress)
 			}
 		} else {
-			mutex.Lock()
+			// node.mutex.Lock()
 			node.next--
-			mutex.Unlock()
+			// node.mutex.Unlock()
 			return nil
 		}
 	}

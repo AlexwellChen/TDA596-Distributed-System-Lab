@@ -42,7 +42,7 @@ func find(id *big.Int, startNode NodeAddress) NodeAddress {
 			fmt.Println("Error in find function: ", err)
 		}
 		found = result.Found
-		fmt.Println("The result of find is: ", result)
+		// fmt.Println("The result of find is: ", result)
 		// found = result.found
 		nextNode = result.SuccessorAddress
 		i++

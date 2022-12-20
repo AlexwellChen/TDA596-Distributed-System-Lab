@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"math/big"
 	"os"
+	
 )
 
 /*------------------------------------------------------------*/
@@ -19,8 +20,9 @@ import (
 // Main function + Node defination :Qi
 
 // Test with 10 nodes on Chord ring, finger table size should larger than 5
-var fingerTableSize = 6 // Each finger table i contains the id of (n + 2^i) mod (2^m)th node. Use [1, 6] as i and space would be [(n+1)%64, (n+32)%64]
-var m = 6               // Chord space has 2^6 = 64 identifiers
+var fingerTableSize = 6 // Each finger table i contains the id of (n + 2^i) mod (2^m)th node.
+// Use [1, 6] as i and space would be [(n+1)%64, (n+32)%64]
+var m = 6 // Chord space has 2^6 = 64 identifiers
 
 // 2^m
 var hashMod = new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(m)), nil)
@@ -50,6 +52,7 @@ type Node struct {
 	// For Chord stabilization
 	Predecessor NodeAddress
 	Successors  []NodeAddress // Multiple successors to handle first succesor node failures
+	// mutex       sync.Mutex
 
 	// For Chord data encryption
 	PrivateKey  *rsa.PrivateKey
@@ -394,6 +397,25 @@ func (node *Node) StoreFileRPC(f FileRPC, reply *StoreFileRPCReply) error {
 	} else {
 		reply.Err = nil
 	}
+	return nil
+}
+
+type CheckFileExistRPCReply struct {
+	Exist bool
+}
+
+func (node *Node) CheckFileExistRPC(fileName string, reply *CheckFileExistRPCReply) error {
+	fmt.Println("-------------- Invoke CheckFileExistRPC function ------------")
+	// Check if the file exists in the bucket
+	// Return true if exists, false if not
+	// Iterate the bucket to find the file
+	for _, value := range node.Bucket {
+		if value == fileName {
+			reply.Exist = true
+			return nil
+		}
+	}
+	reply.Exist = false
 	return nil
 }
 
