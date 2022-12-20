@@ -29,7 +29,10 @@ import (
 * @return:		error: the error returned by the RPC call
  */
 func ChordCall(targetNode NodeAddress, method string, request interface{}, reply interface{}) error {
-	// fmt.Println("Dial to ", targetNode)
+	if len(strings.Split(string(targetNode), ":")) != 2 {
+		fmt.Println("Error: targetNode address is not in the correct format: ", targetNode)
+		return errors.New("Error: targetNode address is not in the correct format: " + string(targetNode))
+	}
 	ip := strings.Split(string(targetNode), ":")[0]
 	port := strings.Split(string(targetNode), ":")[1]
 

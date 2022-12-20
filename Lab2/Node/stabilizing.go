@@ -120,6 +120,9 @@ func (node *Node) stablize() error {
 	}
 	var fakeReply NotifyRPCReply
 	ChordCall(node.Successors[0], "Node.NotifyRPC", node.Address, &fakeReply)
+
+	// Clean redundant files in bucket
+	
 	return nil
 }
 
@@ -350,7 +353,13 @@ func (node *Node) moveFiles(addr NodeAddress) {
 			fmt.Println("Cannot read the file")
 		}
 		newFile.Id = key
-		if between(fileId, addressId, node.Identifier, true) && fileId.Cmp(node.Identifier) != 0 { // if file shouldn't be in this node
+		// if node.Name == "node30" {
+		// 	fmt.Println("FileId: ", fileId)
+		// 	fmt.Println("addressId: ", addressId)
+		// 	fmt.Println("node.Identifier: ", node.Identifier)
+		// 	fmt.Println("between result: ", between(fileId, addressId, node.Identifier, true))
+		// }
+		if between(fileId, addressId, node.Identifier, true) && fileId.Cmp(node.Identifier) != 0 || fileId.Cmp(addressId) == 0 { // if file shouldn't be in this node or file should be in addressId node
 			//move file to new node
 			var moveFileRPCReply StoreFileRPCReply
 			// Move local file to new predecessor using storeFile function

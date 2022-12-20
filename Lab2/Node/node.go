@@ -10,7 +10,6 @@ import (
 	"io/ioutil"
 	"math/big"
 	"os"
-	
 )
 
 /*------------------------------------------------------------*/
@@ -335,10 +334,24 @@ func (node *Node) storeChordFile(f FileRPC, backup bool) bool {
 	// Return true if success, false if failed
 	// Append the file to the bucket
 	f.Id.Mod(f.Id, hashMod)
+	// Check if the file is already in the bucket
+
 	if backup {
+		for k, _ := range node.Backup {
+			if k.Cmp(f.Id) == 0 {
+				fmt.Println("File already in the Backup")
+				return false
+			}
+		}
 		node.Backup[f.Id] = f.Name
 		fmt.Println("Store Backup: ", node.Backup)
 	} else {
+		for k, _ := range node.Bucket {
+			if k.Cmp(f.Id) == 0 {
+				fmt.Println("File already in the bucket")
+				return false
+			}
+		}
 		node.Bucket[f.Id] = f.Name
 		fmt.Println("Store Bucket: ", node.Bucket)
 	}
