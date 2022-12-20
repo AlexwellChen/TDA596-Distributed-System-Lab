@@ -51,6 +51,8 @@ type Coordinator struct {
 	hostPort    string     // host port
 	nMap        int        // number of map tasks
 	nReduce     int        // number of reduce tasks
+	nMapCompleted int      // number of map tasks completed
+	nReduceCompleted int   // number of reduce tasks completed
 	mapTasks    []Task     // map tasks
 	reduceTasks []Task     // reduce tasks
 	mu          sync.Mutex // lock for accessing shared data
@@ -76,6 +78,7 @@ func (c *Coordinator) RequestTask(args *RequestTaskArgs, reply *RequestTaskReply
 	c.mu.Lock()
 
 	task := c.selectTask()
+	// return reference in order to write workerId to tasks
 	task.WorkerId = args.WorkerId
 
 	reply.TaskType = task.Type
@@ -83,7 +86,8 @@ func (c *Coordinator) RequestTask(args *RequestTaskArgs, reply *RequestTaskReply
 	reply.TaskFile = task.File
 
 	c.mu.Unlock()
-	if task.Type!=NoTask {
+	// wait for task to complete only for map and reduce tasks
+	if task.Type==MapTask || task.Type==ReduceTask {
 		go c.waitForTask(task)
 	}
 
@@ -103,30 +107,33 @@ func (c *Coordinator) CompleteTask(args *CompleteTaskArgs, reply *CompleteTaskRe
 		fmt.Printf("CompleteTask: Invalid task type %v\n", args.TaskType)
 		return nil
 	}
-
 	if task.Status == InProgress && task.WorkerId == args.WorkerId {
 		task.Status = Completed
+		// 这里不能直接减，selectTask还要用到nMap和nReduce的值
+		// 如果nmap--会出现只分配前面几个任务的情况
+		// Solution: 用另外两个变量记录已经完成的任务数
 		if args.TaskType == MapTask {
-			c.nMap--
+			// c.nMap--
+			c.nMapCompleted++
 		} else if args.TaskType == ReduceTask {
-			c.nReduce--
+			// c.nReduce--
+			c.nReduceCompleted++
 		}
-		fmt.Printf("Task completed: %v, %v, %v", args.TaskType, args.TaskId, args.WorkerId)
 	}
 
-	reply.CanExit = c.nMap == 0 && c.nReduce == 0
+	reply.CanExit = c.nMapCompleted == c.nMap && c.nReduceCompleted == c.nReduce
 
 	return nil
 }
 
-func (c *Coordinator) selectTask() Task {
+func (c *Coordinator) selectTask() *Task {
 
 	// Dispatch map tasks first
 	for i := 0; i < c.nMap; i++ {
 		if c.mapTasks[i].Status == NotStarted {
 			c.mapTasks[i].Status = InProgress
 			c.mapTasks[i].Index = i
-			return c.mapTasks[i]
+			return &c.mapTasks[i]
 		}
 	}
 
@@ -136,14 +143,14 @@ func (c *Coordinator) selectTask() Task {
 			c.reduceTasks[i].Status = InProgress
 			c.reduceTasks[i].Index = i
 			// Todo: How the reduce task knows which intermediate files to read? And where it is?
-			return c.reduceTasks[i]
+			return &c.reduceTasks[i]
 		}
 	}
 
-	return Task{ExitTask, NotStarted, -1, "", -1}
+	return &Task{ExitTask, NotStarted, -1, "", -1}
 }
 
-func (c *Coordinator) waitForTask(task Task) {
+func (c *Coordinator) waitForTask(task* Task) {
 	if task.Type != MapTask && task.Type != ReduceTask {
 		fmt.Println("waitForTask: Invalid task type ", task.Type)
 		return
@@ -182,9 +189,10 @@ func (c *Coordinator) server() {
 // if the entire job has finished.
 func (c *Coordinator) Done() bool {
 	ret := false
-
-	// Your code here.
-
+	// If all tasks are completed, return true
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	ret = c.nMap == c.nMapCompleted && c.nReduce == c.nReduceCompleted
 	return ret
 }
 

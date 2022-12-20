@@ -44,18 +44,17 @@ func Worker(mapf func(string, string) []KeyValue,
 	// CallExample()
 	for {
 		reply,ok := requestTask()
-		fmt.Println(reply)
 		if !ok {
 			fmt.Println("Cannot request task from coordinator")
 			return
 		}
 		if reply.TaskType == ExitTask {
-			fmt.Println("No more tasks to do, worker exit")
+			// fmt.Println("No more tasks to do, worker exit")
 			return
 		}
 		exit, ok := false , true
 		if reply.TaskType == NoTask {
-			fmt.Println("All map or reduce tasks are in progress, worker wait")
+			// fmt.Println("All map or reduce tasks are in progress, worker wait")
 		}else if reply.TaskType == MapTask {
 			if reply.TaskFile == "" {
 				fmt.Println("No map task file to do")
@@ -69,7 +68,7 @@ func Worker(mapf func(string, string) []KeyValue,
 		}
 
 		if !ok || exit {
-			fmt.Println("Coordinator exit or all tasks complete, worker exit")
+			// fmt.Println("Coordinator exit or all tasks complete, worker exit")
 			return
 		}
 
@@ -181,7 +180,8 @@ func writeReduceOutput(reducef func(string,[]string) string, kvMap map[string][]
 	//write to file
 	for _,key := range keys {
 		value := reducef(key,kvMap[key])
-		_, err := fmt.Fprintf(file, "%v %v \n", key, value)
+		// Delete space here
+		_, err := fmt.Fprintf(file, "%v %v\n", key, value)
 		if err != nil {
 			fmt.Printf("cannot write (%v,%v) to file: %v\n", key, value, filePath)
 		}
