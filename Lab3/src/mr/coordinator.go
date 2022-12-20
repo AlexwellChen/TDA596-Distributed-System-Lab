@@ -62,7 +62,12 @@ type Coordinator struct {
 // an example RPC handler.
 //
 // the RPC argument and reply types are defined in rpc.go.
-
+func (c *Coordinator) GetNReduce(args *GetNReduceArgs, reply *GetNReduceReply) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	reply.NReduce = len(c.reduceTasks)
+	return nil
+}
 /*-------------------------------------------------------*/
 /*-------------------- Task RPC function ----------------*/
 /*-------------------------------------------------------*/

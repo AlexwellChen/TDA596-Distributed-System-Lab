@@ -25,6 +25,12 @@ type ExampleReply struct {
 }
 
 // Add your RPC definitions here.
+type GetNReduceArgs struct {
+}
+
+type GetNReduceReply struct {
+	NReduce int
+}
 
 type RequestTaskArgs struct {
 	WorkerId int
