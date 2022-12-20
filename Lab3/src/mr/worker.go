@@ -9,6 +9,8 @@ import (
 	"log"
 	"net/rpc"
 	"os"
+	"path/filepath"
+	"sort"
 	"time"
 )
 const TaskInterval = 200
@@ -74,23 +76,119 @@ func Worker(mapf func(string, string) []KeyValue,
 func doMap(mapf func(string, string) []KeyValue,filepath string,mapId int) {
 	file, err := os.Open(filepath)
 	if err != nil {
-		fmt.Println("cannot open %v", filepath)
+		fmt.Printf("cannot open %v\n", filepath)
 	}
 	content, err := ioutil.ReadAll(file)
 	if err != nil {
-		fmt.Println("cannot read %v", filepath)
+		fmt.Printf("cannot read %v\n", filepath)
 	}
 	kv := mapf(filepath, string(content))
 	writeMapOutput(kv,mapId)
 }
 
 func writeMapOutput(kv []KeyValue,mapId int) {
+	prefix := fmt.Sprintf("%v/mr-%v-",TempDir,mapId)
+	files := make([]*os.File,0,nReduce)
+	writers := make([]*bufio.Writer,0,nReduce)
+	encoders := make([]*json.Encoder,0,nReduce)
+
+	for i := 0; i < nReduce; i++ {
+		filePath := fmt.Sprintf("%v-%v-%v",prefix,i,os.Getpid())
+		file, err := os.Create(filePath)
+		if err != nil {
+			fmt.Printf("cannot create %v\n", filePath)
+		}
+		writer := bufio.NewWriter(file)
+		files = append(files,file)
+		writers = append(writers,writer)
+		encoders = append(encoders,json.NewEncoder(writer))
+	}
+
+	//write map output kv to files
+	for _,kv := range kv {
+		id := ihash(kv.Key) % nReduce
+		err := encoders[id].Encode(&kv)
+		if err != nil {
+			fmt.Printf("cannot encode %v to file\n", kv)
+		}
+	}
+
+	//flush all files
+	for i,writer := range writers {
+		err := writer.Flush()
+		if err != nil {
+			fmt.Printf("cannot flush for file: %v\n", files[i].Name())
+		}
+	}
+
+	//rename files
+	for i,file := range files {
+		file.Close()
+		newPath := fmt.Sprintf("%v-%v",prefix,i)
+		err := os.Rename(file.Name(),newPath)
+		if err != nil {
+			fmt.Printf("cannot rename %v to %v\n", file.Name(),newPath)
+		}
+	}
+
 }
 
 func doReduce(reducef func(string, []string) string,reduceId int) {
+	files, err := filepath.Glob(fmt.Sprintf("%v/mr-*-%v",TempDir,reduceId))
+	if err != nil {
+		fmt.Printf("cannot find files for reduceId: %v\n", reduceId)
+	}
+	kvMap := make(map[string][]string)
+	var kv KeyValue
+	for _,filePath := range files {
+		file, err := os.Open(filePath)
+		if err != nil {
+			fmt.Printf("cannot open %v\n", filePath)
+		}
+		decoder := json.NewDecoder(file)
+		for decoder.More() {
+			err := decoder.Decode(&kv)
+			if err != nil {
+				fmt.Printf("cannot decode %v\n", filePath)
+			}
+			kvMap[kv.Key] = append(kvMap[kv.Key],kv.Value)
+		}
+	}
+	writeReduceOutput(reducef,kvMap,reduceId)
 }
 
 func writeReduceOutput(reducef func(string,[]string) string, kvMap map[string][]string,reduceId int) {
+	
+	//sort keyvalue map
+	keys := make([]string,0,len(kvMap))
+	for key := range kvMap {
+		keys = append(keys,key)
+	}
+	sort.Strings(keys)
+
+	//create file
+	filePath := fmt.Sprintf("%v/mr-out-%v-%v",TempDir, reduceId, os.Getpid())
+	file, err := os.Create(filePath)
+	if err != nil {
+		fmt.Printf("cannot create %v\n", filePath)
+	}
+
+	//write to file
+	for _,key := range keys {
+		value := reducef(key,kvMap[key])
+		_, err := fmt.Fprintf(file, "%v %v \n", key, value)
+		if err != nil {
+			fmt.Printf("cannot write (%v,%v) to file: %v\n", key, value, filePath)
+		}
+	}
+
+	//rename file
+	file.Close()
+	newPath := fmt.Sprintf("mr-out-%v",reduceId)
+	err = os.Rename(filePath,newPath)
+	if err != nil {
+		fmt.Printf("cannot rename file : %v to %v\n", filePath,newPath)
+	}
 }
 
 func getNReduce() (int,bool) {
