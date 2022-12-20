@@ -44,6 +44,7 @@ func Worker(mapf func(string, string) []KeyValue,
 	// CallExample()
 	for {
 		reply,ok := requestTask()
+		fmt.Println(reply)
 		if !ok {
 			fmt.Println("Cannot request task from coordinator")
 			return
@@ -56,8 +57,12 @@ func Worker(mapf func(string, string) []KeyValue,
 		if reply.TaskType == NoTask {
 			fmt.Println("All map or reduce tasks are in progress, worker wait")
 		}else if reply.TaskType == MapTask {
-			doMap(mapf,reply.TaskFile,reply.TaskId)
-			exit, ok = completeTask(MapTask,reply.TaskId)
+			if reply.TaskFile == "" {
+				fmt.Println("No map task file to do")
+			}else{
+				doMap(mapf,reply.TaskFile,reply.TaskId)
+				exit, ok = completeTask(MapTask,reply.TaskId)
+			}
 		}else if reply.TaskType == ReduceTask {
 			doReduce(reducef,reply.TaskId)
 			exit, ok = completeTask(ReduceTask,reply.TaskId)
@@ -250,8 +255,8 @@ func CallExample() {
 // returns false if something goes wrong.
 func call(rpcname string, args interface{}, reply interface{}) bool {
 	// c, err := rpc.DialHTTP("tcp", "127.0.0.1"+":1234")
-	sockname := coordinatorSock()
-	c, err := rpc.DialHTTP("unix", sockname)
+	// sockname := coordinatorSock()
+	c, err := rpc.DialHTTP("tcp", "localhost:8080")
 	if err != nil {
 		log.Fatal("dialing:", err)
 	}

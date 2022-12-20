@@ -83,7 +83,9 @@ func (c *Coordinator) RequestTask(args *RequestTaskArgs, reply *RequestTaskReply
 	reply.TaskFile = task.File
 
 	c.mu.Unlock()
-	go c.waitForTask(task)
+	if task.Type!=NoTask {
+		go c.waitForTask(task)
+	}
 
 	return nil
 }
@@ -138,7 +140,7 @@ func (c *Coordinator) selectTask() Task {
 		}
 	}
 
-	return Task{NoTask, NotStarted, -1, "", -1}
+	return Task{ExitTask, NotStarted, -1, "", -1}
 }
 
 func (c *Coordinator) waitForTask(task Task) {
@@ -204,13 +206,14 @@ func MakeCoordinator(files []string, nReduce int) *Coordinator {
 	// Initialize map tasks
 	for i := 0; i < nMap; i++ {
 		mapTask := Task{MapTask, NotStarted, i, files[i], -1}
-		c.mapTasks = append(c.mapTasks, mapTask)
+		// Append does not work here, c.mapTasks[i] is empty. Switched to assign value
+		c.mapTasks[i] = mapTask
 	}
 
 	// Initialize reduce tasks
 	for i := 0; i < nReduce; i++ {
 		reduceTask := Task{ReduceTask, NotStarted, i, "", -1}
-		c.reduceTasks = append(c.reduceTasks, reduceTask)
+		c.reduceTasks[i] = reduceTask
 	}
 
 	c.server()
