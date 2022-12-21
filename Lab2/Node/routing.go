@@ -147,5 +147,10 @@ func NAT(addr string) string {
 		new_addr = "95.80.36.91"
 	}
 
+	// jetson's NAT
+	if addr == "192.168.31.153" {
+		new_addr = "95.80.36.91"
+	}
+
 	return new_addr
 }

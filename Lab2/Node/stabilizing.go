@@ -21,6 +21,8 @@ import (
 // verifies n’s immediate
 func (node *Node) stablize() error {
 	// fmt.Println("***************** Invoke stablize function *****************")
+
+	// First request the successor list of your successor[0]
 	var getSuccessorListRPCReply GetSuccessorListRPCReply
 	err := ChordCall(node.Successors[0], "Node.GetSuccessorListRPC", struct{}{}, &getSuccessorListRPCReply)
 	successors := getSuccessorListRPCReply.SuccessorList
@@ -30,14 +32,12 @@ func (node *Node) stablize() error {
 		}
 	} else {
 		fmt.Println("GetSuccessorList failed")
-		// If there is no such element (the list is empty)
-		// set your successor to your own address.
 		if node.Successors[0] == "" {
+			// No successor, use self as successor
 			fmt.Println("Node Successor[0] is empty -> use self as successor")
 			node.Successors[0] = node.Address
 		} else {
-			// Chop the first element off your successors list
-			// and set your successor to the next element in the list.
+			// Successor[0] might be dead, remove it from the list, and shift the list
 			for i := 0; i < len(node.Successors); i++ {
 				if i == len(node.Successors)-1 {
 					node.Successors[i] = ""
@@ -47,6 +47,7 @@ func (node *Node) stablize() error {
 			}
 		}
 	}
+
 	var getPredecessorRPCReply GetPredecessorRPCReply
 	err = ChordCall(node.Successors[0], "Node.GetPredecessorRPC", struct{}{}, &getPredecessorRPCReply)
 	if err == nil {
@@ -80,7 +81,9 @@ func (node *Node) stablize() error {
 			node.Successors[0] = predecessorAddr
 		}
 	}
+
 	// fmt.Println("------------DO COPY NODE BUCKET TO SUCCESSOR[0]------------")
+	// First empty successor's backup
 	deleteSuccessorBackupRPCReply := DeleteSuccessorBackupRPCReply{}
 	err = ChordCall(node.Successors[0], "Node.DeleteSuccessorBackupRPC", struct{}{}, &deleteSuccessorBackupRPCReply)
 	if err != nil {
@@ -88,6 +91,7 @@ func (node *Node) stablize() error {
 		return err
 	}
 	lastValue := ""
+	// Iterate through node's bucket, copy file to successor[0]'s backup
 	for k, v := range node.Bucket {
 		newFile := FileRPC{}
 		newFile.Name = v
@@ -121,8 +125,6 @@ func (node *Node) stablize() error {
 	var fakeReply NotifyRPCReply
 	ChordCall(node.Successors[0], "Node.NotifyRPC", node.Address, &fakeReply)
 
-	// Clean redundant files in bucket
-	
 	return nil
 }
 
@@ -141,27 +143,6 @@ func (node *Node) checkPredecessor() error {
 		_, err := jsonrpc.Dial("tcp", predAddr)
 		if err != nil {
 			fmt.Printf("Predecessor %s has failed\n", string(pred))
-			// Retry 3 times
-			// success := false
-			// for i := 0; i < 3; i++ {
-			// 	_, err = jsonrpc.Dial("tcp", predAddr)
-			// 	if err != nil {
-			// 		fmt.Println("Retry ", i+1, " times")
-			// 		time.Sleep(1 * time.Second)
-			// 	} else {
-			// 		success = true
-			// 		break
-			// 	}
-			// }
-			// if !success {
-			// 	node.Predecessor = ""
-			// 	// fmt.Println("------------DO COPY BUCKUP TO BUCKET------------")
-			// 	for k, v := range node.Backup {
-			// 		if v != "" {
-			// 			node.Bucket[k] = v
-			// 		}
-			// 	}
-			// }
 			node.Predecessor = ""
 			// fmt.Println("------------DO COPY BUCKUP TO BUCKET------------")
 			for k, v := range node.Backup {
@@ -336,6 +317,8 @@ func (node *Node) moveFiles(addr NodeAddress) {
 	addressName = getAddressNameRPCReply.Name
 	addressId := strHash(addressName)
 	addressId.Mod(addressId, hashMod)
+
+	// Iterate through local bucket
 	for key, element := range node.Bucket {
 		fileId := key
 		fileName := element
@@ -353,15 +336,10 @@ func (node *Node) moveFiles(addr NodeAddress) {
 			fmt.Println("Cannot read the file")
 		}
 		newFile.Id = key
-		// if node.Name == "node30" {
-		// 	fmt.Println("FileId: ", fileId)
-		// 	fmt.Println("addressId: ", addressId)
-		// 	fmt.Println("node.Identifier: ", node.Identifier)
-		// 	fmt.Println("between result: ", between(fileId, addressId, node.Identifier, true))
-		// }
 		if between(fileId, addressId, node.Identifier, true) && fileId.Cmp(node.Identifier) != 0 || fileId.Cmp(addressId) == 0 { // if file shouldn't be in this node or file should be in addressId node
 			//move file to new node
 			var moveFileRPCReply StoreFileRPCReply
+			moveFileRPCReply.Backup = false
 			// Move local file to new predecessor using storeFile function
 			err := ChordCall(addr, "Node.StoreFileRPC", newFile, &moveFileRPCReply)
 			if err != nil {
@@ -430,7 +408,16 @@ type DeleteSuccessorBackupRPCReply struct {
 }
 
 func (node *Node) deleteSuccessorBackup() bool {
-	node.Backup = make(map[*big.Int]string)
+	// Iterate through successor's backup and delete all files
+	for key, element := range node.Backup {
+		fileName := element
+		filepath := "../files/" + node.Name + "/chord_storage/" + fileName
+		err := os.Remove(filepath)
+		if err != nil {
+			fmt.Println("Cannot delete file: ", fileName)
+		}
+		delete(node.Backup, key)
+	}
 	return true
 }
 

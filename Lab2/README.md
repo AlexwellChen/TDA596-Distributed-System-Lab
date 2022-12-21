@@ -100,3 +100,6 @@ All files are encrypted with the public key of the current node before being upl
 The use of asymmetric encryption algorithms allows this process to be extended to the file sharing process by using a remote RPC method to obtain the target's public key and then encrypt the file, which is decrypted by the shared object using the private key.
 
 Our system also supports storage redundancy, where each file stored in a node's bucket has a backup in its first successor. When the current node crushed out of the chord due to an accident, our system can still ensure that the hosted files can still be accessed by their successors, so that no fatal error of file loss can occur.
+
+### Cautions
+* File name should be **unique**. Otherwise, the file store will fail (lazy handling).
