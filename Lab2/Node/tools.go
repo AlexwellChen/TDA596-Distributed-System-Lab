@@ -247,6 +247,7 @@ func clientStoreFile(fileName string, node *Node) error {
 }
 
 func clientGetFile(fileName string, node *Node) error {
+	// Get the file from the node
 	addr, err := clientLookUp(fileName, node)
 	if err != nil {
 		return err

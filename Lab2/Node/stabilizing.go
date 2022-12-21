@@ -81,6 +81,7 @@ func (node *Node) stablize() error {
 			node.Successors[0] = predecessorAddr
 		}
 	}
+	ChordCall(node.Successors[0], "Node.NotifyRPC", node.Address, &NotifyRPCReply{})
 
 	// fmt.Println("------------DO COPY NODE BUCKET TO SUCCESSOR[0]------------")
 	// First empty successor's backup
@@ -122,8 +123,6 @@ func (node *Node) stablize() error {
 			}
 		}
 	}
-	var fakeReply NotifyRPCReply
-	ChordCall(node.Successors[0], "Node.NotifyRPC", node.Address, &fakeReply)
 
 	return nil
 }

@@ -57,19 +57,10 @@ type Node struct {
 	PrivateKey  *rsa.PrivateKey
 	PublicKey   *rsa.PublicKey
 	EncryptFlag bool
+	
 	// Create bucket in form of map
 	Bucket map[*big.Int]string
 	Backup map[*big.Int]string
-	// Bucket map[string]string // Hash Key -> File name value store
-	/* Exp:
-	     ------------Store File-------------
-	     	Hash(Hello.txt) -> 123
-			Bucket[123] = Hello.txt
-
-	     -------------Read File-------------
-	     	FileName = Bucket[123]
-			ReadFile(FileName) -> Hello World
-	*/
 }
 
 func (node *Node) generateRSAKey(bits int) {
