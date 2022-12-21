@@ -13,8 +13,7 @@ import (
 )
 
 const TempDir = "tmp"
-const TaskTimeout = time.Second * 10
-const SelectInterval = time.Millisecond * 500
+const TaskTimeout = 10
 
 type TaskType int
 type TaskStatus int
@@ -57,7 +56,6 @@ type Coordinator struct {
 	mapTasks         []Task     // map tasks
 	reduceTasks      []Task     // reduce tasks
 	mu               sync.Mutex // lock for accessing shared data
-	taskCh           chan *Task // channel for tasks
 	// hosts       []Host     // hosts that are available to run tasks (For remote execution)
 }
 
@@ -80,7 +78,7 @@ func (c *Coordinator) GetNReduce(args *GetNReduceArgs, reply *GetNReduceReply) e
 func (c *Coordinator) RequestTask(args *RequestTaskArgs, reply *RequestTaskReply) error {
 	c.mu.Lock()
 
-	task := <-c.taskCh
+	task := c.selectTask()
 	// return reference in order to write workerId to tasks
 	task.WorkerId = args.WorkerId
 
@@ -123,13 +121,13 @@ func (c *Coordinator) CompleteTask(args *CompleteTaskArgs, reply *CompleteTaskRe
 			c.nReduceCompleted++
 		}
 	}
-	go c.selectTask()
+
 	reply.CanExit = c.nMapCompleted == c.nMap && c.nReduceCompleted == c.nReduce
 
 	return nil
 }
 
-func (c *Coordinator) selectTask() {
+func (c *Coordinator) selectTask() *Task {
 
 	// TODO: mutex lock here causes deadlock
 	// c.mu.Lock()
@@ -140,7 +138,7 @@ func (c *Coordinator) selectTask() {
 		if c.mapTasks[i].Status == NotStarted {
 			c.mapTasks[i].Status = InProgress
 			c.mapTasks[i].Index = i
-			c.taskCh <- &c.mapTasks[i]
+			return &c.mapTasks[i]
 		}
 	}
 
@@ -150,11 +148,11 @@ func (c *Coordinator) selectTask() {
 			c.reduceTasks[i].Status = InProgress
 			c.reduceTasks[i].Index = i
 			// Todo: How the reduce task knows which intermediate files to read? And where it is?
-			c.taskCh <- &c.reduceTasks[i]
+			return &c.reduceTasks[i]
 		}
 	}
 
-	c.taskCh <- &Task{ExitTask, NotStarted, -1, "", -1}
+	return &Task{ExitTask, NotStarted, -1, "", -1}
 }
 
 func (c *Coordinator) waitForTask(task *Task) {
@@ -164,7 +162,7 @@ func (c *Coordinator) waitForTask(task *Task) {
 	}
 
 	// Wait for task to complete
-	<-time.After(TaskTimeout)
+	<-time.After(TaskTimeout * time.Second)
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -203,14 +201,6 @@ func (c *Coordinator) Done() bool {
 	return ret
 }
 
-func (c *Coordinator) tickSelectTask() {
-	// 按说应该是每个 task 一个 timer，此处简单处理
-	for !c.Done() {
-		go c.selectTask()
-		time.Sleep(SelectInterval)
-	}
-}
-
 // create a Coordinator.
 // main/mrcoordinator.go calls this function.
 // nReduce is the number of reduce tasks to use.
@@ -240,7 +230,6 @@ func MakeCoordinator(files []string, nReduce int) *Coordinator {
 	}
 
 	c.server()
-	c.tickSelectTask()
 
 	// Create temporary files for reduce tasks
 	outFiles, _ := filepath.Glob("mr-out*")
