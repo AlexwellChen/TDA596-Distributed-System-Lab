@@ -13,7 +13,8 @@ import (
 )
 
 const TempDir = "tmp"
-const TaskTimeout = 10
+const TaskTimeout = time.Second * 10
+const SelectInterval = time.Millisecond * 500
 
 type TaskType int
 type TaskStatus int
@@ -122,7 +123,7 @@ func (c *Coordinator) CompleteTask(args *CompleteTaskArgs, reply *CompleteTaskRe
 			c.nReduceCompleted++
 		}
 	}
-
+	go c.selectTask()
 	reply.CanExit = c.nMapCompleted == c.nMap && c.nReduceCompleted == c.nReduce
 
 	return nil
@@ -163,7 +164,7 @@ func (c *Coordinator) waitForTask(task *Task) {
 	}
 
 	// Wait for task to complete
-	<-time.After(TaskTimeout * time.Second)
+	<-time.After(TaskTimeout)
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -202,6 +203,14 @@ func (c *Coordinator) Done() bool {
 	return ret
 }
 
+func (c *Coordinator) tickSelectTask() {
+	// 按说应该是每个 task 一个 timer，此处简单处理
+	for !c.Done() {
+		go c.selectTask()
+		time.Sleep(SelectInterval)
+	}
+}
+
 // create a Coordinator.
 // main/mrcoordinator.go calls this function.
 // nReduce is the number of reduce tasks to use.
@@ -231,6 +240,7 @@ func MakeCoordinator(files []string, nReduce int) *Coordinator {
 	}
 
 	c.server()
+	c.tickSelectTask()
 
 	// Create temporary files for reduce tasks
 	outFiles, _ := filepath.Glob("mr-out*")
