@@ -99,6 +99,10 @@ fi
 
 # wait for remaining workers and coordinator to exit.
 wait
+if failed_any=1
+then
+  exit 1
+fi
 
 #########################################################
 # now indexer

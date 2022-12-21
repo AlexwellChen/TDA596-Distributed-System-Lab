@@ -128,6 +128,10 @@ func (c *Coordinator) CompleteTask(args *CompleteTaskArgs, reply *CompleteTaskRe
 
 func (c *Coordinator) selectTask() *Task {
 
+	// TODO: mutex lock here causes deadlock
+	// c.mu.Lock()
+	// defer c.mu.Unlock()
+
 	// Dispatch map tasks first
 	for i := 0; i < c.nMap; i++ {
 		if c.mapTasks[i].Status == NotStarted {
