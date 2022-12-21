@@ -47,15 +47,16 @@ type Host struct {
 
 type Coordinator struct {
 	// Your definitions here.
-	hostAddr    string     // host address
-	hostPort    string     // host port
-	nMap        int        // number of map tasks
-	nReduce     int        // number of reduce tasks
-	nMapCompleted int      // number of map tasks completed
-	nReduceCompleted int   // number of reduce tasks completed
-	mapTasks    []Task     // map tasks
-	reduceTasks []Task     // reduce tasks
-	mu          sync.Mutex // lock for accessing shared data
+	hostAddr         string     // host address
+	hostPort         string     // host port
+	nMap             int        // number of map tasks
+	nReduce          int        // number of reduce tasks
+	nMapCompleted    int        // number of map tasks completed
+	nReduceCompleted int        // number of reduce tasks completed
+	mapTasks         []Task     // map tasks
+	reduceTasks      []Task     // reduce tasks
+	mu               sync.Mutex // lock for accessing shared data
+	taskCh           chan *Task // channel for tasks
 	// hosts       []Host     // hosts that are available to run tasks (For remote execution)
 }
 
@@ -70,6 +71,7 @@ func (c *Coordinator) GetNReduce(args *GetNReduceArgs, reply *GetNReduceReply) e
 	reply.NReduce = len(c.reduceTasks)
 	return nil
 }
+
 /*-------------------------------------------------------*/
 /*-------------------- Task RPC function ----------------*/
 /*-------------------------------------------------------*/
@@ -77,7 +79,7 @@ func (c *Coordinator) GetNReduce(args *GetNReduceArgs, reply *GetNReduceReply) e
 func (c *Coordinator) RequestTask(args *RequestTaskArgs, reply *RequestTaskReply) error {
 	c.mu.Lock()
 
-	task := c.selectTask()
+	task := <-c.taskCh
 	// return reference in order to write workerId to tasks
 	task.WorkerId = args.WorkerId
 
@@ -87,7 +89,7 @@ func (c *Coordinator) RequestTask(args *RequestTaskArgs, reply *RequestTaskReply
 
 	c.mu.Unlock()
 	// wait for task to complete only for map and reduce tasks
-	if task.Type==MapTask || task.Type==ReduceTask {
+	if task.Type == MapTask || task.Type == ReduceTask {
 		go c.waitForTask(task)
 	}
 
@@ -126,7 +128,7 @@ func (c *Coordinator) CompleteTask(args *CompleteTaskArgs, reply *CompleteTaskRe
 	return nil
 }
 
-func (c *Coordinator) selectTask() *Task {
+func (c *Coordinator) selectTask() {
 
 	// TODO: mutex lock here causes deadlock
 	// c.mu.Lock()
@@ -137,7 +139,7 @@ func (c *Coordinator) selectTask() *Task {
 		if c.mapTasks[i].Status == NotStarted {
 			c.mapTasks[i].Status = InProgress
 			c.mapTasks[i].Index = i
-			return &c.mapTasks[i]
+			c.taskCh <- &c.mapTasks[i]
 		}
 	}
 
@@ -147,14 +149,14 @@ func (c *Coordinator) selectTask() *Task {
 			c.reduceTasks[i].Status = InProgress
 			c.reduceTasks[i].Index = i
 			// Todo: How the reduce task knows which intermediate files to read? And where it is?
-			return &c.reduceTasks[i]
+			c.taskCh <- &c.reduceTasks[i]
 		}
 	}
 
-	return &Task{ExitTask, NotStarted, -1, "", -1}
+	c.taskCh <- &Task{ExitTask, NotStarted, -1, "", -1}
 }
 
-func (c *Coordinator) waitForTask(task* Task) {
+func (c *Coordinator) waitForTask(task *Task) {
 	if task.Type != MapTask && task.Type != ReduceTask {
 		fmt.Println("waitForTask: Invalid task type ", task.Type)
 		return
