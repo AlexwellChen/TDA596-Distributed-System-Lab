@@ -57,7 +57,7 @@ type Node struct {
 	PrivateKey  *rsa.PrivateKey
 	PublicKey   *rsa.PublicKey
 	EncryptFlag bool
-	
+
 	// Create bucket in form of map
 	Bucket map[*big.Int]string
 	Backup map[*big.Int]string
@@ -439,8 +439,9 @@ func (node *Node) GetFileRPC(f FileRPC, reply *FileRPC) error {
 			break
 		}
 	}
-	fmt.Println("Get file status: ", fileName, " ", ok)
+	fmt.Println("Get file status: ", f.Name, " ", ok)
 	if !ok {
+		fmt.Println("Get file status: ", f.Name, " ", ok)
 		// Print bucket
 		fmt.Println("Bucket: ", node.Bucket)
 		return errors.New("file not found")
@@ -487,7 +488,7 @@ func (node *Node) decryptFile(content []byte) []byte {
 	decryptedContent, err := rsa.DecryptPKCS1v15(rand.Reader, privateKey, content)
 	if err != nil {
 		fmt.Println("Decrypt file failed")
-		return nil
+		return decryptedContent
 	}
 	return decryptedContent
 }
