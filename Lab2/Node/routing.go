@@ -149,7 +149,7 @@ func NAT(addr string) string {
 	/*
 	* NAT: ip is internal ip, need to be changed to external ip
 	 */
-	new_addr := "localhost"
+	new_addr := addr
 	getLocalAddress_res := getLocalAddress()
 	// fmt.Println("getLocalAddress_res: ", getLocalAddress_res)
 	// fmt.Println("Input addr: ", addr)
@@ -171,6 +171,9 @@ func NAT(addr string) string {
 	if addr == "192.168.31.153" {
 		new_addr = "95.80.36.91"
 	}
+	if addr == "172.25.90.182" {
+		new_addr = "50.93.222.140"
+	}	
 
 	return new_addr
 }
