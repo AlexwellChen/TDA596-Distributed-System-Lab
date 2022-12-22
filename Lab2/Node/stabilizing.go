@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/sha1"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -129,6 +130,8 @@ func (node *Node) stablize() error {
 		}
 	}
 
+	// Clean redundant files
+	node.cleanRedundantFile()
 	return nil
 }
 
@@ -415,13 +418,13 @@ type DeleteSuccessorBackupRPCReply struct {
 
 func (node *Node) deleteSuccessorBackup() bool {
 	// Iterate through successor's backup and delete all files
-	for key, element := range node.Backup {
-		fileName := element
-		filepath := "../files/" + node.Name + "/chord_storage/" + fileName
-		err := os.Remove(filepath)
-		if err != nil {
-			fmt.Println("Cannot delete file: ", fileName)
-		}
+	for key, _ := range node.Backup {
+
+		// filepath := "../files/" + node.Name + "/chord_storage/" + fileName
+		// err := os.Remove(filepath)
+		// if err != nil {
+		// 	fmt.Println("Cannot delete file: ", fileName)
+		// }
 		delete(node.Backup, key)
 	}
 	return true
@@ -467,4 +470,45 @@ func (node *Node) SuccessorStoreFileRPC(f FileRPC, reply *SuccessorStoreFileRPCR
 		reply.Err = nil
 	}
 	return nil
+}
+
+func (node *Node) cleanRedundantFile() {
+	// Read local chord_storage directory
+	files, err := ioutil.ReadDir("../files/" + node.Name + "/chord_storage")
+	if err != nil {
+		fmt.Println("Cannot read chord_storage directory")
+	}
+	// Iterate through local chord_storage directory
+	for _, file := range files {
+		// Get file name
+		fileName := file.Name()
+		// Get file id
+		fileId := sha1.New()
+		fileId.Write([]byte(fileName))
+		key := new(big.Int)
+		key.SetBytes(fileId.Sum(nil))
+		key.Mod(key, hashMod)
+		// Check if file is in local bucket and local backup
+		inBucket := false
+		inBackup := false
+		for k, _ := range node.Bucket {
+			if k.Cmp(key) == 0 {
+				inBucket = true
+			}
+		}
+		for k, _ := range node.Backup {
+			if k.Cmp(key) == 0 {
+				inBackup = true
+			}
+		}
+		if !inBucket && !inBackup {
+			// Delete file from local chord_storage directory
+			filepath := "../files/" + node.Name + "/chord_storage/" + fileName
+			err = os.Remove(filepath)
+			if err != nil {
+				fmt.Println("Cannot delete file: ", fileName)
+			}
+
+		}
+	}
 }

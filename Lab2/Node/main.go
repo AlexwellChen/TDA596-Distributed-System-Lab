@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"crypto/tls"
 	"fmt"
 	"math/big"
 	"net"
@@ -78,12 +77,14 @@ func main() {
 		}
 		rpc.Register(node)
 		// Listen to the address
-		cert, _ := tls.LoadX509KeyPair("../chord.crt", "../chord.key")
-		config := &tls.Config{
-			Certificates: []tls.Certificate{cert},
-		}
-		listener, err := tls.Listen("tcp", tcpAddr.String(), config)
-		// listener, err := net.Listen("tcp", tcpAddr.String())
+
+		// cert, _ := tls.LoadX509KeyPair("../chord.crt", "../chord.key")
+		// config := &tls.Config{
+		// 	Certificates: []tls.Certificate{cert},
+		// }
+		// listener, err := tls.Listen("tcp", tcpAddr.String(), config)
+
+		listener, err := net.Listen("tcp", tcpAddr.String())
 		if err != nil {
 			fmt.Println("ListenTCP failed:", err.Error())
 			os.Exit(1)
