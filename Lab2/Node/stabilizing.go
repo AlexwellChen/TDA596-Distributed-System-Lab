@@ -198,6 +198,9 @@ func (node *Node) fixFingers() error {
 	//find successor of id
 	result := FindSuccessorRPCReply{}
 	err := ChordCall(node.Address, "Node.FindSuccessorRPC", id, &result)
+	if result.Found == false {
+		fmt.Println("FindSuccessorRPC failed:", result)
+	}
 	if err != nil {
 		fmt.Println("Find successor failed")
 		return err

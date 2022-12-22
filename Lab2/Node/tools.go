@@ -43,7 +43,7 @@ func ChordCall(targetNode NodeAddress, method string, request interface{}, reply
 	// client := jsonrpc.NewClient(conn)
 	client, err := jsonrpc.Dial("tcp", targetNodeAddr)
 	if err != nil {
-		fmt.Println("Dial Error: ", err)
+		fmt.Println("Method: ", method, "Dial Error: ", err)
 		return err
 	}
 	defer client.Close()

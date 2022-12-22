@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"math/big"
 	"os"
+	"sync"
 )
 
 /*------------------------------------------------------------*/
@@ -51,7 +52,7 @@ type Node struct {
 	// For Chord stabilization
 	Predecessor NodeAddress
 	Successors  []NodeAddress // Multiple successors to handle first succesor node failures
-	// mutex       sync.Mutex
+	mutex       sync.Mutex
 
 	// For Chord data encryption
 	PrivateKey  *rsa.PrivateKey
@@ -127,11 +128,11 @@ func NewNode(args Arguments) *Node {
 	}
 	node.Identifier = strHash(string(node.Name))
 	node.Identifier.Mod(node.Identifier, hashMod)
-	if node.Identifier.Cmp(big.NewInt(0)) == 0 {
-		// Identifier should not be 0, exit os
-		fmt.Println("Node identifier should not be 0, try another name")
-		os.Exit(1)
-	}
+	// if node.Identifier.Cmp(big.NewInt(0)) == 0 {
+	// 	// Identifier should not be 0, exit os
+	// 	fmt.Println("Node identifier should not be 0, try another name")
+	// 	os.Exit(1)
+	// }
 	node.FingerTable = make([]fingerEntry, fingerTableSize+1)
 	node.Bucket = make(map[*big.Int]string)
 	node.Backup = make(map[*big.Int]string)

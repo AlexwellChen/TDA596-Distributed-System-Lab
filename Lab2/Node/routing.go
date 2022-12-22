@@ -15,7 +15,11 @@ func (node *Node) closePrecedingNode(requestID *big.Int) NodeAddress {
 	fingerTableSize := len(node.FingerTable)
 	for i := fingerTableSize - 1; i >= 1; i-- {
 		var reply GetNameRPCReply
-		ChordCall(node.FingerTable[i].Address, "Node.GetNameRPC", "", &reply)
+		err := ChordCall(node.FingerTable[i].Address, "Node.GetNameRPC", "", &reply)
+		if err != nil {
+			fmt.Println("Error in closePrecedingNode function: ", err)
+			continue
+		}
 		fingerId := strHash(reply.Name)
 		fingerId.Mod(fingerId, hashMod)
 		if between(node.Identifier, fingerId, requestID, false) {
@@ -71,27 +75,43 @@ func (node *Node) FindSuccessorRPC(requestID *big.Int, reply *FindSuccessorRPCRe
 	// fmt.Println("*************** Invoke findSuccessor function ***************")
 	successorName := ""
 	var getNameRPCReply GetNameRPCReply
-	ChordCall(node.Successors[0], "Node.GetNameRPC", "", &getNameRPCReply)
+	err := ChordCall(node.Successors[0], "Node.GetNameRPC", "", &getNameRPCReply)
+	if err != nil {
+		fmt.Println("Error in findSuccessorRPC: ", err)
+		reply.Found = false
+		reply.SuccessorAddress = "Error in findSuccessorRPC at " + node.Successors[0]
+		return nil
+	}
 	successorName = getNameRPCReply.Name
 	successorId := strHash(successorName)
 	successorId.Mod(successorId, hashMod)
 	requestID.Mod(requestID, hashMod)
 
 	if between(node.Identifier, requestID, successorId, true) {
-		if requestID.String() == "29" {
-			fmt.Println("Between range is ", node.Identifier, requestID, successorId)
-			fmt.Println("Successor is: ", node.Successors[0])
-		}
+		// if requestID.String() == "29" {
+		// 	fmt.Println("Between range is ", node.Identifier, requestID, successorId)
+		// 	fmt.Println("Successor is: ", node.Successors[0])
+		// }
 		reply.Found = true
 		reply.SuccessorAddress = node.Successors[0]
 		// return &res
 	} else {
+
 		successorAddr := node.closePrecedingNode(requestID)
+		// if requestID.String() == "15" {
+		// 	fmt.Println("Find closest preceding node at ", node.Address, " for ", requestID, " is ", successorAddr, "")
+		// }
 		// Get the successor of the close preceding node
 		var findSuccessorRPCReply FindSuccessorRPCReply
-		ChordCall(successorAddr, "Node.FindSuccessorRPC", requestID, &findSuccessorRPCReply)
-		reply.Found = true
-		reply.SuccessorAddress = findSuccessorRPCReply.SuccessorAddress
+		err := ChordCall(successorAddr, "Node.FindSuccessorRPC", requestID, &findSuccessorRPCReply)
+		if err != nil {
+			fmt.Println("Error in findSuccessorRPC: ", err)
+			reply.Found = false
+			reply.SuccessorAddress = "Error in findSuccessorRPC at " + successorAddr
+		} else {
+			reply.Found = true
+			reply.SuccessorAddress = findSuccessorRPCReply.SuccessorAddress
+		}
 		// return &res
 	}
 	return nil
