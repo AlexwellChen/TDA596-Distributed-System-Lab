@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/sha1"
+	"crypto/tls"
 	"errors"
 	"flag"
 	"fmt"
@@ -39,7 +40,9 @@ func ChordCall(targetNode NodeAddress, method string, request interface{}, reply
 	ip = NAT(ip) // Transalate the internal ip address to public ip address (if external ip is used)
 
 	targetNodeAddr := ip + ":" + port
-	client, err := jsonrpc.Dial("tcp", targetNodeAddr)
+	conn, err := tls.Dial("tcp", targetNodeAddr, &tls.Config{InsecureSkipVerify: true})
+	client := jsonrpc.NewClient(conn)
+	// client, err := jsonrpc.Dial("tcp", targetNodeAddr)
 	if err != nil {
 		fmt.Println("Dial Error: ", err)
 		return err

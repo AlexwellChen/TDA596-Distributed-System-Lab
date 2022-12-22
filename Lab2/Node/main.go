@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"crypto/tls"
 	"fmt"
 	"math/big"
 	"net"
@@ -35,7 +36,7 @@ func (se *ScheduledExecutor) Start(task func()) {
 	}()
 }
 
-func HandleConnection(listener *net.TCPListener, node *Node) {
+func HandleConnection(listener net.Listener, node *Node) {
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
@@ -77,7 +78,12 @@ func main() {
 		}
 		rpc.Register(node)
 		// Listen to the address
-		listener, err := net.ListenTCP("tcp", tcpAddr)
+		cert, _ := tls.LoadX509KeyPair("../chord.crt", "../chord.key")
+		config := &tls.Config{
+			Certificates: []tls.Certificate{cert},
+		}
+		listener, err := tls.Listen("tcp", tcpAddr.String(), config)
+		// listener, err := net.Listen("tcp", tcpAddr.String())
 		if err != nil {
 			fmt.Println("ListenTCP failed:", err.Error())
 			os.Exit(1)

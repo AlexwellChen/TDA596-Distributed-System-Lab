@@ -91,6 +91,11 @@ func (node *Node) stablize() error {
 		fmt.Println("empty successor backup failed")
 		return err
 	}
+
+	// If only one node in the network, do not copy backup
+	if node.Successors[0] == node.Address {
+		return nil
+	}
 	lastValue := ""
 	// Iterate through node's bucket, copy file to successor[0]'s backup
 	for k, v := range node.Bucket {
@@ -361,7 +366,9 @@ func (node *Node) moveFiles(addr NodeAddress) {
 
 func (node *Node) NotifyRPC(address NodeAddress, reply *NotifyRPCReply) error {
 	// fmt.Println("---------------- Invoke NotifyRPC function ------------------")
-	node.moveFiles(address)
+	if node.Successors[0] != node.Address {
+		node.moveFiles(address)
+	}
 	reply.Success, reply.Err = node.notify(address)
 	return nil
 }
