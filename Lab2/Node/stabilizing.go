@@ -263,7 +263,6 @@ func (node *Node) fixFingers() error {
 // -------------------------- NotifyRPC ----------------------------
 type NotifyRPCReply struct {
 	Success bool
-	Err     error
 }
 
 // 'address' thinks it might be our predecessor
@@ -375,7 +374,7 @@ func (node *Node) NotifyRPC(address NodeAddress, reply *NotifyRPCReply) error {
 	if node.Successors[0] != node.Address {
 		node.moveFiles(address)
 	}
-	reply.Success, reply.Err = node.notify(address)
+	reply.Success, _= node.notify(address)
 	return nil
 }
 
