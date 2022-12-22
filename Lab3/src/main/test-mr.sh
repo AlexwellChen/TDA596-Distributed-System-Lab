@@ -81,6 +81,9 @@ sleep 1
 $TIMEOUT ../mrworker ../../mrapps/wc.so &
 $TIMEOUT ../mrworker ../../mrapps/wc.so &
 $TIMEOUT ../mrworker ../../mrapps/wc.so &
+$TIMEOUT ../mrworker ../../mrapps/wc.so &
+$TIMEOUT ../mrworker ../../mrapps/wc.so &
+$TIMEOUT ../mrworker ../../mrapps/wc.so &
 
 # wait for the coordinator to exit.
 wait $pid
@@ -99,10 +102,6 @@ fi
 
 # wait for remaining workers and coordinator to exit.
 wait
-if failed_any=1
-then
-  exit 1
-fi
 
 #########################################################
 # now indexer

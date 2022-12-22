@@ -55,6 +55,7 @@ func Worker(mapf func(string, string) []KeyValue,
 		exit, ok := false , true
 		if reply.TaskType == NoTask {
 			// fmt.Println("All map or reduce tasks are in progress, worker wait")
+			// do nothing
 		}else if reply.TaskType == MapTask {
 			if reply.TaskFile == "" {
 				fmt.Println("No map task file to do")

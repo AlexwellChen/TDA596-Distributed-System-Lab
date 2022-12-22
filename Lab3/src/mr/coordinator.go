@@ -75,17 +75,17 @@ func (c *Coordinator) GetNReduce(args *GetNReduceArgs, reply *GetNReduceReply) e
 /*-------------------------------------------------------*/
 
 func (c *Coordinator) RequestTask(args *RequestTaskArgs, reply *RequestTaskReply) error {
-	c.mu.Lock()
+	
 
 	task := c.selectTask()
 	// return reference in order to write workerId to tasks
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	task.WorkerId = args.WorkerId
 
 	reply.TaskType = task.Type
 	reply.TaskId = task.Index
 	reply.TaskFile = task.File
-
-	c.mu.Unlock()
 	// wait for task to complete only for map and reduce tasks
 	if task.Type==MapTask || task.Type==ReduceTask {
 		go c.waitForTask(task)
@@ -128,9 +128,8 @@ func (c *Coordinator) CompleteTask(args *CompleteTaskArgs, reply *CompleteTaskRe
 
 func (c *Coordinator) selectTask() *Task {
 
-	// TODO: mutex lock here causes deadlock
-	// c.mu.Lock()
-	// defer c.mu.Unlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
 	// Dispatch map tasks first
 	for i := 0; i < c.nMap; i++ {
@@ -140,18 +139,24 @@ func (c *Coordinator) selectTask() *Task {
 			return &c.mapTasks[i]
 		}
 	}
-
+	if c.nMapCompleted != c.nMap {
+		return &Task{NoTask, NotStarted, -1, "", -1}
+	}else{
 	// Dispatch reduce tasks only if all map tasks are completed
-	for i := 0; i < c.nReduce; i++ {
-		if c.reduceTasks[i].Status == NotStarted {
-			c.reduceTasks[i].Status = InProgress
-			c.reduceTasks[i].Index = i
-			// Todo: How the reduce task knows which intermediate files to read? And where it is?
-			return &c.reduceTasks[i]
+		for i := 0; i < c.nReduce; i++ {
+			if c.reduceTasks[i].Status == NotStarted {
+				c.reduceTasks[i].Status = InProgress
+				c.reduceTasks[i].Index = i
+				// Todo: How the reduce task knows which intermediate files to read? And where it is?
+				return &c.reduceTasks[i]
+			}
 		}
 	}
-
-	return &Task{ExitTask, NotStarted, -1, "", -1}
+	if(c.nReduceCompleted != c.nReduce){
+		return &Task{NoTask, NotStarted, -1, "", -1}
+	}else{
+		return &Task{ExitTask, NotStarted, -1, "", -1}
+	}
 }
 
 func (c *Coordinator) waitForTask(task* Task) {
