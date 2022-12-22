@@ -41,6 +41,7 @@ func ChordCall(targetNode NodeAddress, method string, request interface{}, reply
 	targetNodeAddr := ip + ":" + port
 	// conn, err := tls.Dial("tcp", targetNodeAddr, &tls.Config{InsecureSkipVerify: true})
 	// client := jsonrpc.NewClient(conn)
+	fmt.Println("ChordCall: ", targetNodeAddr, method)
 	client, err := jsonrpc.Dial("tcp", targetNodeAddr)
 	if err != nil {
 		fmt.Println("Method: ", method, "Dial Error: ", err)
