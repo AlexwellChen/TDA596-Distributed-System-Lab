@@ -117,10 +117,13 @@ func NewNode(args Arguments) *Node {
 	var localAddress string
 	if args.Address == "localhost" || args.Address == "127.0.0.1" {
 		localAddress = string(args.Address)
-	} else {
+	} else if args.Address == "0.0.0.0" {
+		localAddress = getip2()
+	}else{
 		localAddress = getLocalAddress()
 	}
 	node.Address = NodeAddress(fmt.Sprintf("%s:%d", localAddress, args.Port))
+	fmt.Println("Node address: ", node.Address)
 	if args.ClientName == "Default" {
 		node.Name = string(node.Address)
 	} else {
@@ -237,7 +240,7 @@ func (node *Node) joinChord(joinNode NodeAddress) error {
 	// joinNode is the successor of current node, which is node.Successors[0]
 	// current node will be the predecessor of joinNode
 	node.Predecessor = ""
-	fmt.Printf("Node %s join the Chord ring: %s ", node.Name, joinNode)
+	fmt.Println("Node %s join the Chord ring: %s ", node.Name, joinNode)
 
 	//  Join node is in charge of looking for the successor of the node's identifier
 	// 1. Call the joinNode's findSuccessor() to find the successor of the node's identifier

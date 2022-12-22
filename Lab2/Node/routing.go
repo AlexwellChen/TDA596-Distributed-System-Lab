@@ -172,7 +172,7 @@ func NAT(addr string) string {
 		new_addr = "95.80.36.91"
 	}
 	// qi's laptop NAT
-	if addr == "172.25.90.182" {
+	if addr == "192.168.254.89" {
 		new_addr = "50.93.222.140"
 	}	
 
