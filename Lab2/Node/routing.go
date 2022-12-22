@@ -89,7 +89,7 @@ func (node *Node) FindSuccessorRPC(requestID *big.Int, reply *FindSuccessorRPCRe
 
 	if between(node.Identifier, requestID, successorId, true) {
 		// if requestID.String() == "29" {
-		// 	fmt.Println("Between range is ", node.Identifier, requestID, successorId)
+		// 	fmt.Println("Between rangeis ", node.Identifier, requestID, successorId)
 		// 	fmt.Println("Successor is: ", node.Successors[0])
 		// }
 		reply.Found = true
@@ -159,7 +159,7 @@ func NAT(addr string) string {
 
 	// wwq's NAT
 	if addr == "172.31.21.112" {
-		new_addr = "3.89.241.69"
+		new_addr = "54.145.27.145"
 	}
 
 	// cfz's NAT
