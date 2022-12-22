@@ -47,15 +47,15 @@ type Host struct {
 
 type Coordinator struct {
 	// Your definitions here.
-	hostAddr    string     // host address
-	hostPort    string     // host port
-	nMap        int        // number of map tasks
-	nReduce     int        // number of reduce tasks
-	nMapCompleted int      // number of map tasks completed
-	nReduceCompleted int   // number of reduce tasks completed
-	mapTasks    []Task     // map tasks
-	reduceTasks []Task     // reduce tasks
-	mu          sync.Mutex // lock for accessing shared data
+	hostAddr         string     // host address
+	hostPort         string     // host port
+	nMap             int        // number of map tasks
+	nReduce          int        // number of reduce tasks
+	nMapCompleted    int        // number of map tasks completed
+	nReduceCompleted int        // number of reduce tasks completed
+	mapTasks         []Task     // map tasks
+	reduceTasks      []Task     // reduce tasks
+	mu               sync.Mutex // lock for accessing shared data
 	// hosts       []Host     // hosts that are available to run tasks (For remote execution)
 }
 
@@ -70,6 +70,7 @@ func (c *Coordinator) GetNReduce(args *GetNReduceArgs, reply *GetNReduceReply) e
 	reply.NReduce = len(c.reduceTasks)
 	return nil
 }
+
 /*-------------------------------------------------------*/
 /*-------------------- Task RPC function ----------------*/
 /*-------------------------------------------------------*/
@@ -87,7 +88,7 @@ func (c *Coordinator) RequestTask(args *RequestTaskArgs, reply *RequestTaskReply
 	reply.TaskId = task.Index
 	reply.TaskFile = task.File
 	// wait for task to complete only for map and reduce tasks
-	if task.Type==MapTask || task.Type==ReduceTask {
+	if task.Type == MapTask || task.Type == ReduceTask {
 		go c.waitForTask(task)
 	}
 
@@ -159,7 +160,7 @@ func (c *Coordinator) selectTask() *Task {
 	}
 }
 
-func (c *Coordinator) waitForTask(task* Task) {
+func (c *Coordinator) waitForTask(task *Task) {
 	if task.Type != MapTask && task.Type != ReduceTask {
 		fmt.Println("waitForTask: Invalid task type ", task.Type)
 		return

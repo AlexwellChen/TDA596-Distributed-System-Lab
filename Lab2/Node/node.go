@@ -57,19 +57,10 @@ type Node struct {
 	PrivateKey  *rsa.PrivateKey
 	PublicKey   *rsa.PublicKey
 	EncryptFlag bool
+	
 	// Create bucket in form of map
 	Bucket map[*big.Int]string
 	Backup map[*big.Int]string
-	// Bucket map[string]string // Hash Key -> File name value store
-	/* Exp:
-	     ------------Store File-------------
-	     	Hash(Hello.txt) -> 123
-			Bucket[123] = Hello.txt
-
-	     -------------Read File-------------
-	     	FileName = Bucket[123]
-			ReadFile(FileName) -> Hello World
-	*/
 }
 
 func (node *Node) generateRSAKey(bits int) {
@@ -348,7 +339,7 @@ func (node *Node) storeChordFile(f FileRPC, backup bool) bool {
 	} else {
 		for k, _ := range node.Bucket {
 			if k.Cmp(f.Id) == 0 {
-				fmt.Println("File already in the bucket")
+				fmt.Println("File already in the Bucket")
 				return false
 			}
 		}
@@ -455,7 +446,7 @@ func (node *Node) GetFileRPC(f FileRPC, reply *FileRPC) error {
 		return errors.New("file not found")
 	}
 
-	// Read the file from the file download folder
+	// Read the file from the file chord_storage folder
 	currentNodeFileDownloadPath := "../files/" + node.Name + "/chord_storage/"
 	filepath := currentNodeFileDownloadPath + fileName
 	file, err := os.Open(filepath)
@@ -467,6 +458,7 @@ func (node *Node) GetFileRPC(f FileRPC, reply *FileRPC) error {
 	if err != nil {
 		return err
 	}
+
 	// Return the file
 	reply.Id = f.Id
 	reply.Name = fileName
