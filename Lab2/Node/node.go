@@ -119,7 +119,7 @@ func NewNode(args Arguments) *Node {
 		localAddress = string(args.Address)
 	} else if args.Address == "0.0.0.0" {
 		localAddress = getip2()
-	}else{
+	} else {
 		localAddress = getLocalAddress()
 	}
 	node.Address = NodeAddress(fmt.Sprintf("%s:%d", localAddress, args.Port))
@@ -131,11 +131,6 @@ func NewNode(args Arguments) *Node {
 	}
 	node.Identifier = strHash(string(node.Name))
 	node.Identifier.Mod(node.Identifier, hashMod)
-	// if node.Identifier.Cmp(big.NewInt(0)) == 0 {
-	// 	// Identifier should not be 0, exit os
-	// 	fmt.Println("Node identifier should not be 0, try another name")
-	// 	os.Exit(1)
-	// }
 	node.FingerTable = make([]fingerEntry, fingerTableSize+1)
 	node.Bucket = make(map[*big.Int]string)
 	node.Backup = make(map[*big.Int]string)
@@ -240,7 +235,7 @@ func (node *Node) joinChord(joinNode NodeAddress) error {
 	// joinNode is the successor of current node, which is node.Successors[0]
 	// current node will be the predecessor of joinNode
 	node.Predecessor = ""
-	fmt.Println("Node %s join the Chord ring: %s ", node.Name, joinNode)
+	fmt.Printf("Node %s join the Chord ring: %s \n", node.Name, joinNode)
 
 	//  Join node is in charge of looking for the successor of the node's identifier
 	// 1. Call the joinNode's findSuccessor() to find the successor of the node's identifier

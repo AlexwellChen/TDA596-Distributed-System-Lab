@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/sha1"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -9,11 +10,10 @@ import (
 	"log"
 	"math/big"
 	"net"
+	"net/http"
 	"net/rpc/jsonrpc"
 	"os"
 	"regexp"
-	"net/http"
-	"encoding/json"
 	"strings"
 )
 
@@ -38,7 +38,7 @@ func ChordCall(targetNode NodeAddress, method string, request interface{}, reply
 	ip := strings.Split(string(targetNode), ":")[0]
 	port := strings.Split(string(targetNode), ":")[1]
 
-	ip = NAT(ip) // Transalate the internal ip address to public ip address (if external ip is used)
+	// ip = NAT(ip) // Transalate the internal ip address to public ip address (if external ip is used)
 
 	targetNodeAddr := ip + ":" + port
 	// conn, err := tls.Dial("tcp", targetNodeAddr, &tls.Config{InsecureSkipVerify: true})
@@ -296,24 +296,24 @@ func getLocalAddress() string {
 }
 
 type IP struct {
-    Query string
+	Query string
 }
 
 func getip2() string {
-    req, err := http.Get("http://ip-api.com/json/")
-    if err != nil {
-        return err.Error()
-    }
-    defer req.Body.Close()
+	req, err := http.Get("http://ip-api.com/json/")
+	if err != nil {
+		return err.Error()
+	}
+	defer req.Body.Close()
 
-    body, err := ioutil.ReadAll(req.Body)
-    if err != nil {
-        return err.Error()
-    }
+	body, err := ioutil.ReadAll(req.Body)
+	if err != nil {
+		return err.Error()
+	}
 
-    var ip IP
+	var ip IP
 	fmt.Println("body: ", string(body))
-    json.Unmarshal(body, &ip)
+	json.Unmarshal(body, &ip)
 
-    return ip.Query
+	return ip.Query
 }
