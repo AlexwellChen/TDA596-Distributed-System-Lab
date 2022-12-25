@@ -10,11 +10,14 @@ package main
 // Please do not change this file.
 //
 
-import "6.824/mr"
-import "plugin"
-import "os"
-import "fmt"
-import "log"
+import (
+	"fmt"
+	"log"
+	"os"
+	"plugin"
+
+	"6.824/mr"
+)
 
 func main() {
 	if len(os.Args) != 2 {
@@ -24,13 +27,12 @@ func main() {
 
 	mapf, reducef := loadPlugin(os.Args[1])
 
+	fmt.Println("mrworker: starting worker process")
 	mr.Worker(mapf, reducef)
 }
 
-//
 // load the application Map and Reduce functions
 // from a plugin file, e.g. ../mrapps/wc.so
-//
 func loadPlugin(filename string) (func(string, string) []mr.KeyValue, func(string, []string) string) {
 	p, err := plugin.Open(filename)
 	if err != nil {

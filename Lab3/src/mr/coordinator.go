@@ -76,12 +76,12 @@ func (c *Coordinator) GetNReduce(args *GetNReduceArgs, reply *GetNReduceReply) e
 /*-------------------------------------------------------*/
 
 func (c *Coordinator) RequestTask(args *RequestTaskArgs, reply *RequestTaskReply) error {
-	
 
 	task := c.selectTask()
 	// return reference in order to write workerId to tasks
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	fmt.Println("Task distributed: ", task.Type, task.Index)
 	task.WorkerId = args.WorkerId
 
 	reply.TaskType = task.Type
@@ -142,8 +142,8 @@ func (c *Coordinator) selectTask() *Task {
 	}
 	if c.nMapCompleted != c.nMap {
 		return &Task{NoTask, NotStarted, -1, "", -1}
-	}else{
-	// Dispatch reduce tasks only if all map tasks are completed
+	} else {
+		// Dispatch reduce tasks only if all map tasks are completed
 		for i := 0; i < c.nReduce; i++ {
 			if c.reduceTasks[i].Status == NotStarted {
 				c.reduceTasks[i].Status = InProgress
@@ -153,9 +153,9 @@ func (c *Coordinator) selectTask() *Task {
 			}
 		}
 	}
-	if(c.nReduceCompleted != c.nReduce){
+	if c.nReduceCompleted != c.nReduce {
 		return &Task{NoTask, NotStarted, -1, "", -1}
-	}else{
+	} else {
 		return &Task{ExitTask, NotStarted, -1, "", -1}
 	}
 }
@@ -176,7 +176,7 @@ func (c *Coordinator) waitForTask(task *Task) {
 	if task.Status == InProgress {
 		task.Status = NotStarted
 		task.WorkerId = -1
-		fmt.Println("Task timed out, reset task status: ", task.Index)
+		fmt.Println("Task timed out, reset task status:", task.Index)
 	}
 }
 
@@ -219,7 +219,7 @@ func MakeCoordinator(files []string, nReduce int) *Coordinator {
 	c.mapTasks = make([]Task, nMap)
 	c.reduceTasks = make([]Task, nReduce)
 	c.hostAddr = "localhost"
-	c.hostPort = "8080"
+	c.hostPort = "8000"
 
 	// Initialize map tasks
 	for i := 0; i < nMap; i++ {
