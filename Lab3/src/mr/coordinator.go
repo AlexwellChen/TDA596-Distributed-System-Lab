@@ -2,17 +2,17 @@ package mr
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
 	"net/rpc"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 	"sync"
 	"time"
-	"io/ioutil"
-	"strings"
-	"regexp"
 )
 
 const TempDir = "tmp"
@@ -21,6 +21,8 @@ const TaskTimeout = 10
 type TaskType int
 type TaskStatus int
 type JobStatus int
+
+var run_position string
 
 const (
 	MapTask TaskType = iota
@@ -79,7 +81,7 @@ func (c *Coordinator) GetNReduce(args *GetNReduceArgs, reply *GetNReduceReply) e
 /*-------------------------------------------------------*/
 
 func (c *Coordinator) RequestTask(args *RequestTaskArgs, reply *RequestTaskReply) error {
-	
+
 	task := c.selectTask()
 	// return reference in order to write workerId to tasks
 	c.mu.Lock()
@@ -145,7 +147,7 @@ func (c *Coordinator) selectTask() *Task {
 	if c.nMapCompleted != c.nMap {
 		return &Task{NoTask, NotStarted, -1, "", -1}
 	} else {
-	// Dispatch reduce tasks only if all map tasks are completed
+		// Dispatch reduce tasks only if all map tasks are completed
 		for i := 0; i < c.nReduce; i++ {
 			if c.reduceTasks[i].Status == NotStarted {
 				c.reduceTasks[i].Status = InProgress
@@ -205,7 +207,65 @@ func (c *Coordinator) Done() bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	ret = c.nMap == c.nMapCompleted && c.nReduce == c.nReduceCompleted
+	if ret && run_position == "cloud" {
+		files_list := getCloudFileList("mr-out*")
+		for i := 0; i < len(files_list); i++ {
+			// Download files from cloud
+			res, err := http.Get("http://3.213.15.92:8080/root/" + files_list[i])
+			if err != nil {
+				log.Fatal(err)
+			}
+			defer res.Body.Close()
+			if res.StatusCode != http.StatusOK {
+				log.Fatal("Error in downloading file")
+			}
+			body, err := ioutil.ReadAll(res.Body)
+			if err != nil {
+				log.Fatal(err)
+			}
+			// Write to local file
+			f, err := os.Create(files_list[i])
+			if err != nil {
+				log.Fatal(err)
+			}
+			defer f.Close()
+			_, err = f.Write(body)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+	}
+
 	return ret
+}
+func getCloudFileList(prefix string) []string {
+	res, err := http.Get("http://3.213.15.92:8080/root")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		log.Fatal("Error in getting file list")
+	}
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+	file_list := strings.Split(string(body), " ")
+	new_file_list := make([]string, 0)
+	for i := 0; i < len(file_list); i++ {
+		// if file_list[i] matches with pg-*.txt then append to files
+		// Use regular expression to match
+		matched, err := regexp.MatchString(prefix, file_list[i])
+		if err != nil {
+			log.Fatal(err)
+		}
+		if matched {
+			new_file_list = append(new_file_list, file_list[i])
+			fmt.Println(file_list[i])
+		}
+	}
+	return new_file_list
 }
 
 // create a Coordinator.
@@ -216,41 +276,19 @@ func MakeCoordinator(files []string, nReduce int, position string) *Coordinator 
 
 	// Your code here.
 	// Connect to server and get a list of files
-	if position == "cloud"{
-		res, err := http.Get("http://3.213.15.92:8080/root")
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer res.Body.Close()
-		if(res.StatusCode != http.StatusOK){
-			log.Fatal("Error in getting file list")
-		}
-		body, err := ioutil.ReadAll(res.Body)
-		if err != nil {
-			log.Fatal(err)
-		}
-		file_list := strings.Split(string(body), " ")
-		new_file_list := make([]string, 0)
-		for i := 0; i < len(file_list); i++ {
-			// if file_list[i] matches with pg-*.txt then append to files
-			// Use regular expression to match
-			matched, err := regexp.MatchString("pg-*.", file_list[i])
-			if err != nil {
-				log.Fatal(err)
-			}
-			if matched {
-				new_file_list = append(new_file_list, file_list[i])
-				fmt.Println(file_list[i])
-			}
-		}
+	if position == "cloud" {
+		run_position = "cloud"
+		new_file_list := getCloudFileList("pg-*")
 		files = new_file_list
+	} else {
+		run_position = "local"
 	}
 	nMap := len(files)
 	c.nMap = nMap
 	c.nReduce = nReduce
 	c.mapTasks = make([]Task, nMap)
 	c.reduceTasks = make([]Task, nReduce)
-	if(position == "cloud"){
+	if position == "cloud" {
 		c.hostAddr = "0.0.0.0"
 		c.hostPort = "8000"
 	} else {
