@@ -300,11 +300,11 @@ func writeReduceOutput(reducef func(string, []string) string, kvMap map[string][
 		if err != nil {
 			fmt.Printf("cannot open %v\n", newPath)
 		}
-		content, err := ioutil.ReadAll(pfile)
+		content, err := io.ReadAll(pfile)
 		if err != nil {
 			fmt.Printf("cannot read %v\n", newPath)
 		}
-		reader := bytes.NewReader(content)
+		reader := strings.NewReader(string(content))
 		res, err := http.Post(server_addr+newPath, "text/plain;charset=UTF-8", reader)
 		if err != nil {
 			log.Fatal(err)
