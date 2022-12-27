@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -178,13 +179,20 @@ func writeMapOutput(kv []KeyValue, mapId int) {
 			if err != nil {
 				fmt.Printf("cannot open %v\n", newPath)
 			}
-			content, err := ioutil.ReadAll(pfile)
+			content, err := io.ReadAll(pfile)
 			if err != nil {
 				fmt.Printf("cannot read %v\n", newPath)
 			}
-			reader := bytes.NewReader(content)
+			reader := strings.NewReader(string(content))
 			// TODO: check what we did in lab1 for post request
 			res, err := http.Post(server_addr+newPath, "text/plain;charset=UTF-8", reader)
+			if err != nil {
+				log.Fatal(err)
+			}
+			defer res.Body.Close()
+			if res.StatusCode != http.StatusOK {
+				log.Fatal("upload file to cloud server failed")
+			}
 		}
 	}
 
