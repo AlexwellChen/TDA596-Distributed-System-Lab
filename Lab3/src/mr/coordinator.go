@@ -211,7 +211,7 @@ func (c *Coordinator) Done() bool {
 		files_list := getCloudFileList("mr-out*")
 		for i := 0; i < len(files_list); i++ {
 			// Download files from cloud
-			res, err := http.Get("http://3.213.15.92:8080/root/" + files_list[i])
+			res, err := http.Get("http://localhost:8080/root/" + files_list[i])
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -239,7 +239,7 @@ func (c *Coordinator) Done() bool {
 	return ret
 }
 func getCloudFileList(prefix string) []string {
-	res, err := http.Get("http://3.213.15.92:8080/root")
+	res, err := http.Get("http://localhost:8080/root")
 	if err != nil {
 		log.Fatal(err)
 	}

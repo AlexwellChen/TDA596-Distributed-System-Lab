@@ -46,9 +46,9 @@ func Worker(mapf func(string, string) []KeyValue,
 	// Your worker implementation here.
 	if position == "cloud" {
 		// wanqiu's aws address here
-		coordinator_addr = "3.230.196.47:8000"
+		coordinator_addr = "localhost:8000"
 		// qi's server address
-		server_addr = "http://3.213.15.92:8080/root/"
+		server_addr = "http://localhost:8080/root/"
 		if_cloud = true
 	} else if position == "local" {
 		coordinator_addr = "localhost:8000"
@@ -216,6 +216,7 @@ func doReduce(reducef func(string, []string) string, reduceId int) {
 		files = make([]string, 0)
 		for _, file := range strings.Split(string(content), " ") {
 			if strings.HasPrefix(file, "mr-") && strings.HasSuffix(file, fmt.Sprintf("-%v", reduceId)) {
+				// fmt.Println("file name: " + file + " matches pattern")
 				files = append(files, file)
 			}
 		}
@@ -228,11 +229,12 @@ func doReduce(reducef func(string, []string) string, reduceId int) {
 	}
 	kvMap := make(map[string][]string)
 	var kv KeyValue
-	decoder := json.NewDecoder(nil)
+	var decoder *json.Decoder
 	for _, filePath := range files {
 		if if_cloud {
 			// if running on different machines, get file from cloud server
-			file, err := http.Get(server_addr + filePath)
+			// fmt.Println("get file from cloud server: " + server_addr + filePath)
+			file, err := http.Get(server_addr + "tmp/" + filePath)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -296,14 +298,11 @@ func writeReduceOutput(reducef func(string, []string) string, kvMap map[string][
 	if if_cloud {
 		// upload file to cloud server
 		// read file content
-		pfile, err := os.Open(newPath)
-		if err != nil {
-			fmt.Printf("cannot open %v\n", newPath)
-		}
-		content, err := ioutil.ReadAll(pfile)
+		content, err := ioutil.ReadFile(newPath)
 		if err != nil {
 			fmt.Printf("cannot read %v\n", newPath)
 		}
+		fmt.Println("Content length: ", len(content))
 		reader := bytes.NewReader(content)
 		res, err := http.Post(server_addr+newPath, "text/plain;charset=UTF-8", reader)
 		if err != nil {

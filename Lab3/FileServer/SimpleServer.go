@@ -16,15 +16,24 @@ func main() {
 // Handle get and post requests
 func handleRequests() {
 	http.HandleFunc("/", homePage)
-	log.Fatal(http.ListenAndServe("0.0.0.0:8080", nil))
+	log.Fatal(http.ListenAndServe("localhost:8080", nil))
 }
 func homePage(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "/" {
 		fmt.Fprintf(w, "Welcome to the File storage server!")
 		fmt.Println("Endpoint Hit: homePage")
 	}
-	if (r.URL.Path == "/root" || r.URL.Path == "/root/" || r.URL.Path == "/root/tmp" || r.URL.Path == "/root/tmp/") && r.Method == "GET" {
+	if (r.URL.Path == "/root" || r.URL.Path == "/root/") && r.Method == "GET" {
 		file_names, err := ioutil.ReadDir("./root")
+		if err != nil {
+			log.Fatal(err)
+		}
+		for _, file := range file_names {
+			fmt.Fprintf(w, file.Name()+" ")
+		}
+		fmt.Println("Endpoint Hit: getFiles")
+	} else if (r.URL.Path == "/root/tmp" || r.URL.Path == "/root/tmp/") && r.Method == "GET" {
+		file_names, err := ioutil.ReadDir("./root/tmp")
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -35,8 +44,8 @@ func homePage(w http.ResponseWriter, r *http.Request) {
 	} else {
 		getFile(w, r)
 	}
-
 }
+
 func getFile(w http.ResponseWriter, r *http.Request) {
 	// return the file content
 	if r.Method == "GET" {
