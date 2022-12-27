@@ -10,6 +10,9 @@ import (
 	"path/filepath"
 	"sync"
 	"time"
+	"io/ioutil"
+	"strings"
+	"regexp"
 )
 
 const TempDir = "tmp"
@@ -76,12 +79,11 @@ func (c *Coordinator) GetNReduce(args *GetNReduceArgs, reply *GetNReduceReply) e
 /*-------------------------------------------------------*/
 
 func (c *Coordinator) RequestTask(args *RequestTaskArgs, reply *RequestTaskReply) error {
-
+	
 	task := c.selectTask()
 	// return reference in order to write workerId to tasks
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	fmt.Println("Task distributed: ", task.Type, task.Index)
 	task.WorkerId = args.WorkerId
 
 	reply.TaskType = task.Type
@@ -143,7 +145,7 @@ func (c *Coordinator) selectTask() *Task {
 	if c.nMapCompleted != c.nMap {
 		return &Task{NoTask, NotStarted, -1, "", -1}
 	} else {
-		// Dispatch reduce tasks only if all map tasks are completed
+	// Dispatch reduce tasks only if all map tasks are completed
 		for i := 0; i < c.nReduce; i++ {
 			if c.reduceTasks[i].Status == NotStarted {
 				c.reduceTasks[i].Status = InProgress
@@ -209,10 +211,37 @@ func (c *Coordinator) Done() bool {
 // create a Coordinator.
 // main/mrcoordinator.go calls this function.
 // nReduce is the number of reduce tasks to use.
-func MakeCoordinator(files []string, nReduce int) *Coordinator {
+func MakeCoordinator(files []string, nReduce int, position string) *Coordinator {
 	c := Coordinator{}
 
 	// Your code here.
+	// Connect to server and get a list of files
+	if position == "cloud"{
+		res, err := http.Get("http://44.204.152.117:8080/root")
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer res.Body.Close()
+		body, err := ioutil.ReadAll(res.Body)
+		if err != nil {
+			log.Fatal(err)
+		}
+		file_list := strings.Split(string(body), " ")
+		new_file_list := make([]string, 0)
+		for i := 0; i < len(file_list); i++ {
+			// if file_list[i] matches with pg-*.txt then append to files
+			// Use regular expression to match
+			matched, err := regexp.MatchString(files[0], file_list[i])
+			if err != nil {
+				log.Fatal(err)
+			}
+			if matched {
+				new_file_list = append(new_file_list, file_list[i])
+				fmt.Println(file_list[i])
+			}
+		}
+		files = new_file_list
+	}
 	nMap := len(files)
 	c.nMap = nMap
 	c.nReduce = nReduce

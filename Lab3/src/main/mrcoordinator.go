@@ -18,13 +18,14 @@ import (
 )
 
 func main() {
-	if len(os.Args) < 2 {
+	if len(os.Args) < 3 {
 		fmt.Fprintf(os.Stderr, "Usage: mrcoordinator inputfiles...\n")
 		os.Exit(1)
 	}
 
 	fmt.Println("mrcoordinator: starting coordinator process")
-	m := mr.MakeCoordinator(os.Args[1:], 10)
+	fmt.Println("mrcoordinator: input files are", os.Args[1:len(os.Args)-1])
+	m := mr.MakeCoordinator(os.Args[1:len(os.Args)-1], 10, os.Args[len(os.Args)-1])
 	for m.Done() == false {
 		time.Sleep(time.Second)
 	}
