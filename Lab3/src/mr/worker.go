@@ -204,7 +204,7 @@ func doReduce(reducef func(string, []string) string, reduceId int) {
 		// if running on different machines, get files from cloud server
 		// get root/tmp file list
 		// match file name pattern "tmp/mr-*-reduceId"
-		all_files, err := http.Get(server_addr + TempDir)
+		all_files, err := http.Get("http://3.213.15.92:8080/root/tmp")
 		if err != nil {
 			log.Fatal(err)
 		}
