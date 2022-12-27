@@ -16,7 +16,7 @@ func main() {
 // Handle get and post requests
 func handleRequests() {
 	http.HandleFunc("/", homePage)
-	log.Fatal(http.ListenAndServe("localhost:8080", nil))
+	log.Fatal(http.ListenAndServe("0.0.0.0:8080", nil))
 }
 func homePage(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "/" {
