@@ -24,7 +24,7 @@ func homePage(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("Endpoint Hit: homePage")
 	}
 	if (r.URL.Path == "/root" || r.URL.Path == "/root/" || r.URL.Path == "/root/tmp" || r.URL.Path == "/root/tmp/") && r.Method == "GET" {
-		file_names, err := ioutil.ReadDir("./root")
+		file_names, err := ioutil.ReadDir("." + r.URL.Path)
 		if err != nil {
 			log.Fatal(err)
 		}
