@@ -23,7 +23,7 @@ func homePage(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "Welcome to the File storage server!")
 		fmt.Println("Endpoint Hit: homePage")
 	}
-	if (r.URL.Path == "/root" || r.URL.Path == "/root/") && r.Method == "GET" {
+	if (r.URL.Path == "/root" || r.URL.Path == "/root/" || r.URL.Path == "/root/tmp" || r.URL.Path == "/root/tmp/") && r.Method == "GET" {
 		file_names, err := ioutil.ReadDir("./root")
 		if err != nil {
 			log.Fatal(err)
