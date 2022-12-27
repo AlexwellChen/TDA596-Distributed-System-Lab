@@ -2,16 +2,18 @@ package mr
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"net/rpc"
 	"os"
 	"path/filepath"
 	"sort"
-	"net/http"
+	"strings"
 	"time"
 )
 
@@ -47,10 +49,10 @@ func Worker(mapf func(string, string) []KeyValue,
 		// qi's server address
 		server_addr = "http://3.213.15.92:8080/root/"
 		if_cloud = true
-	} else if position == "local"{
+	} else if position == "local" {
 		coordinator_addr = "localhost:8000"
 		if_cloud = false
-	}else{
+	} else {
 		fmt.Println("Wrong argument")
 		return
 	}
@@ -144,7 +146,7 @@ func writeMapOutput(kv []KeyValue, mapId int) {
 		encoders = append(encoders, json.NewEncoder(writer))
 	}
 
-	//write map output kv to files
+	// Write map output kv to files
 	for _, kv := range kv {
 		id := ihash(kv.Key) % nReduce
 		err := encoders[id].Encode(&kv)
@@ -153,7 +155,7 @@ func writeMapOutput(kv []KeyValue, mapId int) {
 		}
 	}
 
-	//flush all files
+	// Flush all files
 	for i, writer := range writers {
 		err := writer.Flush()
 		if err != nil {
@@ -161,7 +163,7 @@ func writeMapOutput(kv []KeyValue, mapId int) {
 		}
 	}
 
-	//rename files
+	// Rename files
 	for i, file := range files {
 		file.Close()
 		newPath := fmt.Sprintf("%v-%v", prefix, i)
@@ -182,13 +184,14 @@ func writeMapOutput(kv []KeyValue, mapId int) {
 			}
 			reader := bytes.NewReader(content)
 			// TODO: check what we did in lab1 for post request
-			res,err:=http.Post(server_addr+newPath,"text/plain;charset=UTF-8",reader)
+			res, err := http.Post(server_addr+newPath, "text/plain;charset=UTF-8", reader)
 		}
 	}
 
 }
 
 func doReduce(reducef func(string, []string) string, reduceId int) {
+	var files []string
 	if if_cloud {
 		// if running on different machines, get files from cloud server
 		// get root/tmp file list
@@ -202,20 +205,22 @@ func doReduce(reducef func(string, []string) string, reduceId int) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		files := make([]string, 0)
+		files = make([]string, 0)
 		for _, file := range strings.Split(string(content), " ") {
 			if strings.HasPrefix(file, "mr-") && strings.HasSuffix(file, fmt.Sprintf("-%v", reduceId)) {
 				files = append(files, file)
 			}
 		}
 	} else {
-		files, err := filepath.Glob(fmt.Sprintf("%v/mr-*-%v", TempDir, reduceId))
+		local_files, err := filepath.Glob(fmt.Sprintf("%v/mr-*-%v", TempDir, reduceId))
 		if err != nil {
 			fmt.Printf("cannot find files for reduceId: %v\n", reduceId)
 		}
+		files = local_files
 	}
 	kvMap := make(map[string][]string)
 	var kv KeyValue
+	decoder := json.NewDecoder(nil)
 	for _, filePath := range files {
 		if if_cloud {
 			// if running on different machines, get file from cloud server
@@ -225,16 +230,16 @@ func doReduce(reducef func(string, []string) string, reduceId int) {
 			}
 			defer file.Body.Close()
 			content, err := ioutil.ReadAll(file.Body)
-			if err != nil {	
+			if err != nil {
 				log.Fatal(err)
 			}
-			decoder := json.NewDecoder(bytes.NewReader(content))
-		}else{
+			decoder = json.NewDecoder(bytes.NewReader(content))
+		} else {
 			file, err := os.Open(filePath)
 			if err != nil {
 				fmt.Printf("cannot open %v\n", filePath)
 			}
-			decoder := json.NewDecoder(file)
+			decoder = json.NewDecoder(file)
 		}
 		for decoder.More() {
 			err := decoder.Decode(&kv)
@@ -280,7 +285,7 @@ func writeReduceOutput(reducef func(string, []string) string, kvMap map[string][
 	if err != nil {
 		fmt.Printf("cannot rename file : %v to %v\n", filePath, newPath)
 	}
-	if(if_cloud){
+	if if_cloud {
 		// upload file to cloud server
 		// read file content
 		pfile, err := os.Open(newPath)
@@ -292,7 +297,7 @@ func writeReduceOutput(reducef func(string, []string) string, kvMap map[string][
 			fmt.Printf("cannot read %v\n", newPath)
 		}
 		reader := bytes.NewReader(content)
-		res,err:=http.Post(server_addr+newPath,"text/plain;charset=UTF-8",reader)
+		res, err := http.Post(server_addr+newPath, "text/plain;charset=UTF-8", reader)
 		if err != nil {
 			log.Fatal(err)
 		}
