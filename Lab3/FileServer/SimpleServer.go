@@ -58,7 +58,7 @@ func getFile(w http.ResponseWriter, r *http.Request) {
 		file_name := r.URL.Path
 		// if file exist, delete it
 		if _, err := os.Stat("." + file_name); err == nil {
-			err := os.Remove(file_name)
+			err := os.Remove("." + file_name)
 			if err != nil {
 				log.Fatal(err)
 			}
