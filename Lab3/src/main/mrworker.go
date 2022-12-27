@@ -20,7 +20,7 @@ import (
 )
 
 func main() {
-	if len(os.Args) != 2 {
+	if len(os.Args) != 3 {
 		fmt.Fprintf(os.Stderr, "Usage: mrworker xxx.so\n")
 		os.Exit(1)
 	}
@@ -28,7 +28,7 @@ func main() {
 	mapf, reducef := loadPlugin(os.Args[1])
 
 	fmt.Println("mrworker: starting worker process")
-	mr.Worker(mapf, reducef)
+	mr.Worker(mapf, reducef,os.Args[2])
 }
 
 // load the application Map and Reduce functions

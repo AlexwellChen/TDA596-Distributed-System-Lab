@@ -11,12 +11,16 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"net/http"
 	"time"
 )
 
 const TaskInterval = 200
 
 var nReduce int
+var coordinator_addr string
+var server_addr string
+var if_cloud bool
 
 // Map functions return a slice of KeyValue.
 type KeyValue struct {
@@ -34,9 +38,22 @@ func ihash(key string) int {
 
 // main/mrworker.go calls this function.
 func Worker(mapf func(string, string) []KeyValue,
-	reducef func(string, []string) string) {
+	reducef func(string, []string) string, position string) {
 
 	// Your worker implementation here.
+	if position == "cloud" {
+		// wanqiu's aws address here
+		coordinator_addr = "3.230.196.47:8000"
+		// qi's server address
+		server_addr = "http://3.213.15.92:8080/root/"
+		if_cloud = true
+	} else if position == "local"{
+		coordinator_addr = "localhost:8000"
+		if_cloud = false
+	}else{
+		fmt.Println("Wrong argument")
+		return
+	}
 	n, ok := getNReduce()
 	if !ok {
 		fmt.Println("Cannot get nReduce from coordinator")
@@ -82,13 +99,28 @@ func Worker(mapf func(string, string) []KeyValue,
 }
 
 func doMap(mapf func(string, string) []KeyValue, filepath string, mapId int) {
-	file, err := os.Open(filepath)
-	if err != nil {
-		fmt.Printf("cannot open %v\n", filepath)
-	}
-	content, err := ioutil.ReadAll(file)
-	if err != nil {
-		fmt.Printf("cannot read %v\n", filepath)
+	var content []byte
+	if if_cloud {
+		// if running on different machines, get file from cloud server
+		res, err := http.Get(server_addr + filepath)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer res.Body.Close()
+		content, err = ioutil.ReadAll(res.Body)
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		// if running on local machine, read file from local
+		file, err := os.Open(filepath)
+		if err != nil {
+			fmt.Printf("cannot open %v\n", filepath)
+		}
+		content, err = ioutil.ReadAll(file)
+		if err != nil {
+			fmt.Printf("cannot read %v\n", filepath)
+		}
 	}
 	kv := mapf(filepath, string(content))
 	writeMapOutput(kv, mapId)
@@ -137,23 +169,73 @@ func writeMapOutput(kv []KeyValue, mapId int) {
 		if err != nil {
 			fmt.Printf("cannot rename %v to %v\n", file.Name(), newPath)
 		}
+		// If running on different machines, upload file to cloud server
+		if if_cloud {
+			// read file content
+			pfile, err := os.Open(newPath)
+			if err != nil {
+				fmt.Printf("cannot open %v\n", newPath)
+			}
+			content, err := ioutil.ReadAll(pfile)
+			if err != nil {
+				fmt.Printf("cannot read %v\n", newPath)
+			}
+			reader := bytes.NewReader(content)
+			// TODO: check what we did in lab1 for post request
+			res,err:=http.Post(server_addr+newPath,"text/plain;charset=UTF-8",reader)
+		}
 	}
 
 }
 
 func doReduce(reducef func(string, []string) string, reduceId int) {
-	files, err := filepath.Glob(fmt.Sprintf("%v/mr-*-%v", TempDir, reduceId))
-	if err != nil {
-		fmt.Printf("cannot find files for reduceId: %v\n", reduceId)
+	if if_cloud {
+		// if running on different machines, get files from cloud server
+		// get root/tmp file list
+		// match file name pattern "tmp/mr-*-reduceId"
+		all_files, err := http.Get(server_addr + TempDir)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer all_files.Body.Close()
+		content, err := ioutil.ReadAll(all_files.Body)
+		if err != nil {
+			log.Fatal(err)
+		}
+		files := make([]string, 0)
+		for _, file := range strings.Split(string(content), " ") {
+			if strings.HasPrefix(file, "mr-") && strings.HasSuffix(file, fmt.Sprintf("-%v", reduceId)) {
+				files = append(files, file)
+			}
+		}
+	} else {
+		files, err := filepath.Glob(fmt.Sprintf("%v/mr-*-%v", TempDir, reduceId))
+		if err != nil {
+			fmt.Printf("cannot find files for reduceId: %v\n", reduceId)
+		}
 	}
 	kvMap := make(map[string][]string)
 	var kv KeyValue
 	for _, filePath := range files {
-		file, err := os.Open(filePath)
-		if err != nil {
-			fmt.Printf("cannot open %v\n", filePath)
+		if if_cloud {
+			// if running on different machines, get file from cloud server
+			file, err := http.Get(server_addr + filePath)
+			if err != nil {
+				log.Fatal(err)
+			}
+			defer file.Body.Close()
+			content, err := ioutil.ReadAll(file.Body)
+			if err != nil {	
+				log.Fatal(err)
+			}
+			decoder := json.NewDecoder(bytes.NewReader(content))
+		}else{
+			file, err := os.Open(filePath)
+			if err != nil {
+				fmt.Printf("cannot open %v\n", filePath)
+			}
+			decoder := json.NewDecoder(file)
 		}
-		decoder := json.NewDecoder(file)
 		for decoder.More() {
 			err := decoder.Decode(&kv)
 			if err != nil {
@@ -197,6 +279,27 @@ func writeReduceOutput(reducef func(string, []string) string, kvMap map[string][
 	err = os.Rename(filePath, newPath)
 	if err != nil {
 		fmt.Printf("cannot rename file : %v to %v\n", filePath, newPath)
+	}
+	if(if_cloud){
+		// upload file to cloud server
+		// read file content
+		pfile, err := os.Open(newPath)
+		if err != nil {
+			fmt.Printf("cannot open %v\n", newPath)
+		}
+		content, err := ioutil.ReadAll(pfile)
+		if err != nil {
+			fmt.Printf("cannot read %v\n", newPath)
+		}
+		reader := bytes.NewReader(content)
+		res,err:=http.Post(server_addr+newPath,"text/plain;charset=UTF-8",reader)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer res.Body.Close()
+		if res.StatusCode != http.StatusOK {
+			log.Fatal("cannot upload file to cloud server")
+		}
 	}
 }
 
@@ -261,7 +364,7 @@ func CallExample() {
 func call(rpcname string, args interface{}, reply interface{}) bool {
 	// c, err := rpc.DialHTTP("tcp", "127.0.0.1"+":1234")
 	// sockname := coordinatorSock()
-	c, err := rpc.DialHTTP("tcp", "localhost:8000")
+	c, err := rpc.DialHTTP("tcp", coordinator_addr)
 	if err != nil {
 		log.Fatal("dialing:", err)
 	}

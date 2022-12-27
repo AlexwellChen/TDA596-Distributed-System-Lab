@@ -24,7 +24,6 @@ func main() {
 	}
 
 	fmt.Println("mrcoordinator: starting coordinator process")
-	fmt.Println("mrcoordinator: input files are", os.Args[1:len(os.Args)-1])
 	m := mr.MakeCoordinator(os.Args[1:len(os.Args)-1], 10, os.Args[len(os.Args)-1])
 	for m.Done() == false {
 		time.Sleep(time.Second)

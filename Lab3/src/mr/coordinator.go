@@ -217,11 +217,14 @@ func MakeCoordinator(files []string, nReduce int, position string) *Coordinator 
 	// Your code here.
 	// Connect to server and get a list of files
 	if position == "cloud"{
-		res, err := http.Get("http://44.204.152.117:8080/root")
+		res, err := http.Get("http://3.213.15.92:8080/root")
 		if err != nil {
 			log.Fatal(err)
 		}
 		defer res.Body.Close()
+		if(res.StatusCode != http.StatusOK){
+			log.Fatal("Error in getting file list")
+		}
 		body, err := ioutil.ReadAll(res.Body)
 		if err != nil {
 			log.Fatal(err)
@@ -231,7 +234,7 @@ func MakeCoordinator(files []string, nReduce int, position string) *Coordinator 
 		for i := 0; i < len(file_list); i++ {
 			// if file_list[i] matches with pg-*.txt then append to files
 			// Use regular expression to match
-			matched, err := regexp.MatchString(files[0], file_list[i])
+			matched, err := regexp.MatchString("pg-*.", file_list[i])
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -247,8 +250,13 @@ func MakeCoordinator(files []string, nReduce int, position string) *Coordinator 
 	c.nReduce = nReduce
 	c.mapTasks = make([]Task, nMap)
 	c.reduceTasks = make([]Task, nReduce)
-	c.hostAddr = "localhost"
-	c.hostPort = "8000"
+	if(position == "cloud"){
+		c.hostAddr = "0.0.0.0"
+		c.hostPort = "8000"
+	} else {
+		c.hostAddr = "localhost"
+		c.hostPort = "8000"
+	}
 
 	// Initialize map tasks
 	for i := 0; i < nMap; i++ {
