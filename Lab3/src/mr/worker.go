@@ -46,9 +46,9 @@ func Worker(mapf func(string, string) []KeyValue,
 	// Your worker implementation here.
 	if position == "cloud" {
 		// wanqiu's aws address here
-		coordinator_addr = "localhost:8000"
+		coordinator_addr = "3.230.196.47:8000"
 		// qi's server address
-		server_addr = "http://localhost:8080/root/"
+		server_addr = "http://3.213.15.92:8080/root/"
 		if_cloud = true
 	} else if position == "local" {
 		coordinator_addr = "localhost:8000"
