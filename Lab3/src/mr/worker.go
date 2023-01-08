@@ -64,7 +64,7 @@ func Worker(mapf func(string, string) []KeyValue,
 	nReduce = n
 	// uncomment to send the Example RPC to the coordinator.
 	// CallExample()
-	fmt.Println("Worker start")
+	// fmt.Println("Worker start")
 	for {
 		reply, ok := requestTask()
 		if !ok {
@@ -375,11 +375,22 @@ func CallExample() {
 // returns false if something goes wrong.
 func call(rpcname string, args interface{}, reply interface{}) bool {
 	// c, err := rpc.DialHTTP("tcp", "127.0.0.1"+":1234")
-	// sockname := coordinatorSock()
-	c, err := rpc.DialHTTP("tcp", coordinator_addr)
-	if err != nil {
-		log.Fatal("dialing:", err)
+	var c *rpc.Client
+	var err error
+
+	if run_position != "cloud" {
+		sockname := coordinatorSock()
+		c, err = rpc.DialHTTP("unix", sockname)
+		if err != nil {
+			log.Fatal("unix dialing:", err)
+		}
+	} else {
+		c, err = rpc.DialHTTP("tcp", coordinator_addr)
+		if err != nil {
+			log.Fatal("tcp dialing:", err)
+		}
 	}
+
 	defer c.Close()
 
 	err = c.Call(rpcname, args, reply)

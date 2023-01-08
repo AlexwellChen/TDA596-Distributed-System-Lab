@@ -27,8 +27,8 @@ func main() {
 
 	mapf, reducef := loadPlugin(os.Args[1])
 
-	fmt.Println("mrworker: starting worker process")
-	mr.Worker(mapf, reducef,os.Args[2])
+	// fmt.Println("mrworker: starting worker process")
+	mr.Worker(mapf, reducef, os.Args[2])
 }
 
 // load the application Map and Reduce functions

@@ -188,10 +188,15 @@ func (c *Coordinator) waitForTask(task *Task) {
 func (c *Coordinator) server() {
 	rpc.Register(c)
 	rpc.HandleHTTP()
-	l, e := net.Listen("tcp", c.hostAddr+":"+c.hostPort)
-	// sockname := coordinatorSock()
-	// os.Remove(sockname)
-	// l, e := net.Listen("unix", sockname)
+	var l net.Listener
+	var e error
+	if run_position == "cloud" {
+		l, e = net.Listen("tcp", c.hostAddr+":"+c.hostPort)
+	} else {
+		sockname := coordinatorSock()
+		os.Remove(sockname)
+		l, e = net.Listen("unix", sockname)
+	}
 	if e != nil {
 		log.Fatal("listen error:", e)
 	}
