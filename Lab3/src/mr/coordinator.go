@@ -91,6 +91,9 @@ func (c *Coordinator) RequestTask(args *RequestTaskArgs, reply *RequestTaskReply
 	reply.TaskType = task.Type
 	reply.TaskId = task.Index
 	reply.TaskFile = task.File
+	if run_position == "cloud" {
+		fmt.Println("Dispatching task", task.Type, task.Index, "to worker", args.WorkerId)
+	}
 	// wait for task to complete only for map and reduce tasks
 	if task.Type == MapTask || task.Type == ReduceTask {
 		go c.waitForTask(task)
@@ -152,7 +155,6 @@ func (c *Coordinator) selectTask() *Task {
 			if c.reduceTasks[i].Status == NotStarted {
 				c.reduceTasks[i].Status = InProgress
 				c.reduceTasks[i].Index = i
-				// Todo: How the reduce task knows which intermediate files to read? And where it is?
 				return &c.reduceTasks[i]
 			}
 		}
