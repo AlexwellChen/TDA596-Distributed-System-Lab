@@ -25,6 +25,8 @@ var coordinator_addr string
 var server_addr string
 var if_cloud bool
 
+var location = "cloud"
+
 // Map functions return a slice of KeyValue.
 type KeyValue struct {
 	Key   string
@@ -378,7 +380,7 @@ func call(rpcname string, args interface{}, reply interface{}) bool {
 	var c *rpc.Client
 	var err error
 
-	if run_position != "cloud" {
+	if location != "cloud" {
 		sockname := coordinatorSock()
 		c, err = rpc.DialHTTP("unix", sockname)
 		if err != nil {

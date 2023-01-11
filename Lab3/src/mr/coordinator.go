@@ -25,6 +25,7 @@ type JobStatus int
 var run_position string
 
 const (
+	// iota is enum
 	MapTask TaskType = iota
 	ReduceTask
 	NoTask
